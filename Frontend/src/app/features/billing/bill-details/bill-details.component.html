@@ -1,0 +1,157 @@
+<div class="bill-details-page">
+  <div class="page-header">
+    <button class="btn-back" (click)="goBack()"><i class="pi pi-arrow-left"></i></button>
+    <h1>Bill Details</h1>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem;"></i>
+      <p>Loading bill...</p>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
+    </div>
+  }
+
+  @if (!loading && bill) {
+    <!-- Bill Summary -->
+    <div class="bill-summary">
+      <div class="summary-header">
+        <div>
+          <span class="bill-number">{{ bill.billNumber }}</span>
+          <span class="status-badge" [attr.data-status]="bill.paymentStatus">{{ bill.paymentStatus }}</span>
+        </div>
+        <span class="encounter-ref">Encounter #{{ bill.encounterId }}</span>
+      </div>
+      <div class="summary-amounts">
+        <div class="amount-item">
+          <span class="amount-label">Total</span>
+          <span class="amount-value total">{{ bill.totalAmount | currency:'INR' }}</span>
+        </div>
+        <div class="amount-item">
+          <span class="amount-label">Paid</span>
+          <span class="amount-value paid">{{ bill.paidAmount | currency:'INR' }}</span>
+        </div>
+        <div class="amount-item">
+          <span class="amount-label">Balance Due</span>
+          <span class="amount-value due" [class.zero]="balanceDue === 0">{{ balanceDue | currency:'INR' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bill Items Table -->
+    <div class="section-card">
+      <h3>Bill Items</h3>
+      @if (bill.items && bill.items.length > 0) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Service</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of bill.items; track item.id; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ item.serviceName || 'Service #' + item.serviceId }}</td>
+                  <td>{{ item.price | currency:'INR' }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td class="subtotal">{{ item.subtotal | currency:'INR' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="total-label">Total</td>
+                <td class="total-value">{{ bill.totalAmount | currency:'INR' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-items">No items added yet</div>
+      }
+    </div>
+
+    <!-- Add Service Item -->
+    @if (bill.paymentStatus !== 'PAID') {
+      <div class="section-card">
+        <h3>Add Service</h3>
+        <div class="add-item-form">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Service</label>
+              <select [(ngModel)]="selectedServiceId">
+                <option [ngValue]="null" disabled>Select a service...</option>
+                @for (svc of services; track svc.id) {
+                  <option [ngValue]="svc.id">{{ svc.name }} - {{ svc.price | currency:'INR' }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label>Quantity</label>
+              <input type="number" [(ngModel)]="itemQuantity" min="1" />
+            </div>
+            <div class="form-group flex-1">
+              <label>Subtotal</label>
+              <div class="computed-value">{{ getItemSubtotal() | currency:'INR' }}</div>
+            </div>
+            <div class="form-group btn-group">
+              <label>&nbsp;</label>
+              <button class="btn-primary btn-add" (click)="addItem()" [disabled]="addingItem || !selectedServiceId">
+                @if (addingItem) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-plus"></i> Add
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Section -->
+      @if (bill.totalAmount > 0 && balanceDue > 0) {
+        <div class="section-card payment-section">
+          <h3>Process Payment</h3>
+          <div class="payment-form">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Amount</label>
+                <input type="number" [(ngModel)]="paymentAmount" [max]="balanceDue" min="0.01" step="0.01" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Payment Method</label>
+                <select [(ngModel)]="paymentMethod">
+                  <option value="CASH">Cash</option>
+                  <option value="CARD">Card</option>
+                  <option value="UPI">UPI</option>
+                  <option value="INSURANCE">Insurance</option>
+                </select>
+              </div>
+              <div class="form-group btn-group">
+                <label>&nbsp;</label>
+                <button class="btn-pay" (click)="processPayment()" [disabled]="processingPayment || paymentAmount <= 0">
+                  @if (processingPayment) {
+                    <i class="pi pi-spin pi-spinner"></i> Processing...
+                  } @else {
+                    <i class="pi pi-check"></i> Pay {{ paymentAmount | currency:'INR' }}
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>

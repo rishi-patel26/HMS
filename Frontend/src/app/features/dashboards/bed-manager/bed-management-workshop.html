@@ -1,0 +1,173 @@
+		<div class="page">
+			<p-card>
+				<div class="page-header">
+					<h1>Bed Management Workspace</h1>
+					<p>Review queue and run allocation, admission, transfer, and discharge operations.</p>
+				</div>
+
+				@if (loading) {
+					<div class="loading-state">
+						<i class="pi pi-spin pi-spinner"></i>
+						<span>Loading bed management workspace...</span>
+					</div>
+				} @else if (errorMessage) {
+					<div class="error-state">
+						<i class="pi pi-exclamation-triangle"></i>
+						<span>{{ errorMessage }}</span>
+						<button pButton type="button" label="Retry" class="p-button-sm" (click)="loadDashboard()"></button>
+					</div>
+				} @else if (dashboard) {
+					<div class="grid">
+						<section class="panel queue-panel">
+							<h2>Priority Queue</h2>
+							@if (queue.length === 0) {
+								<div class="empty">No open requests.</div>
+							}
+
+							@for (req of queue; track req.id) {
+								<article class="queue-item">
+									<div class="head">
+										<div>
+											<strong>{{ req.patientName }}</strong>
+											<small>{{ req.patientUhid }} | {{ req.encounterNumber }}</small>
+										</div>
+										<div class="chips">
+											<p-tag [value]="req.priority" [styleClass]="'chip priority p-' + req.priority.toLowerCase()"></p-tag>
+											<p-tag [value]="req.status" [styleClass]="'chip status s-' + req.status.toLowerCase()"></p-tag>
+										</div>
+									</div>
+
+									<div class="meta">
+										<span>Type: {{ req.requiredBedType }}</span>
+										@if (req.preferredWardName) {
+											<span>Ward: {{ req.preferredWardName }}</span>
+										}
+										@if (req.notes) {
+											<span>Notes: {{ req.notes }}</span>
+										}
+									</div>
+
+									@if (req.status === 'REQUESTED' || req.status === 'UNDER_REVIEW') {
+										<div class="actions">
+											<button
+												pButton
+												type="button"
+												class="review p-button-sm"
+												(click)="markUnderReview(req)"
+												[disabled]="req.status === 'UNDER_REVIEW'"
+												label="Mark Review"
+											></button>
+
+											<select
+												[(ngModel)]="selectedBedByRequest[req.id]"
+												(focus)="ensureAssignableLoaded(req)"
+											>
+												<option [ngValue]="null">Select bed</option>
+												@for (bed of matchingBeds(req); track bed.id) {
+													<option [ngValue]="bed.id">{{ bed.bedNumber }} - {{ bed.wardName }}</option>
+												}
+											</select>
+
+											<button pButton type="button" class="allocate p-button-sm" (click)="allocate(req)" label="Allocate"></button>
+											<button pButton type="button" class="reject p-button-sm" (click)="reject(req)" label="Reject"></button>
+										</div>
+									}
+								</article>
+							}
+						</section>
+
+						<section class="panel occupancy-panel">
+							<h2>Ward Occupancy</h2>
+							<div class="cards">
+								@for (ward of wards; track ward.id) {
+									<article class="ward-card">
+										<div class="ward-head">
+											<strong>{{ ward.name }}</strong>
+											<span>{{ ward.type }}</span>
+										</div>
+										<div class="ward-metrics">{{ ward.occupiedBeds }} / {{ ward.capacity }}</div>
+										<div class="bar">
+											<div class="fill" [style.width.%]="ward.occupancyRate"></div>
+										</div>
+									</article>
+								}
+							</div>
+						</section>
+
+						<section class="panel beds-panel">
+							<h2>Available Beds</h2>
+							<div class="table-wrap">
+								<table>
+									<thead>
+									<tr>
+										<th>Bed</th>
+										<th>Ward</th>
+										<th>Type</th>
+										<th>Status</th>
+									</tr>
+									</thead>
+									<tbody>
+									@for (bed of beds; track bed.id) {
+										<tr>
+											<td>{{ bed.bedNumber }}</td>
+											<td>{{ bed.wardName }}</td>
+											<td>{{ bed.bedType }}</td>
+											<td>{{ bed.status }}</td>
+										</tr>
+									}
+									</tbody>
+								</table>
+							</div>
+						</section>
+
+						<section class="panel assign-panel">
+							<h2>Active Assignments</h2>
+							<div class="table-wrap">
+								<table>
+									<thead>
+									<tr>
+										<th>Encounter</th>
+										<th>Current Bed</th>
+										<th>Status</th>
+										<th>Assigned At</th>
+										<th>Actions</th>
+									</tr>
+									</thead>
+									<tbody>
+									@for (asg of assignments; track asg.id) {
+										<tr>
+											<td>{{ asg.encounterId }}</td>
+											<td>{{ asg.bedNumber }} ({{ asg.wardName }})</td>
+											<td>{{ asg.status }}</td>
+											<td>{{ formatDateTime(asg.assignedAt) }}</td>
+											<td>
+												<div class="assignment-actions">
+													@if (asg.status === 'ALLOCATED') {
+														<button pButton type="button" class="review p-button-sm" (click)="admit(asg)" label="Admit"></button>
+													}
+													@if (asg.status === 'ADMITTED') {
+														<select
+															[(ngModel)]="transferBedByAssignment[asg.id]"
+															(focus)="ensureTransferOptionsLoaded(asg)"
+														>
+															<option [ngValue]="null">Transfer target bed</option>
+															@for (bed of transferOptions(asg); track bed.id) {
+																<option [ngValue]="bed.id">{{ bed.bedNumber }} - {{ bed.wardName }}</option>
+															}
+														</select>
+														<button pButton type="button" class="allocate p-button-sm" (click)="transfer(asg)" label="Transfer"></button>
+														<button pButton type="button" class="reject p-button-sm" (click)="discharge(asg)" label="Discharge"></button>
+													}
+												</div>
+											</td>
+										</tr>
+									}
+									</tbody>
+								</table>
+							</div>
+						</section>
+					</div>
+				}
+			</p-card>
+		</div>
+	

@@ -1,0 +1,327 @@
+<div class="encounter-details-page">
+
+  <!-- CHECK-IN MODE -->
+  @if (mode === 'checkin') {
+    <div class="page-header">
+      <button class="btn-back" (click)="goBack()"><i class="pi pi-arrow-left"></i></button>
+      <h1>Patient Check-In</h1>
+    </div>
+
+    @if (errorMessage) {
+      <div class="error-banner">
+        <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
+      </div>
+    }
+
+    @if (initialized) {
+    <div class="form-card">
+      <form [formGroup]="checkinForm" (ngSubmit)="onCheckIn()">
+        <!-- Patient Selection -->
+        <div class="form-section">
+          <h3>Select Patient</h3>
+          @if (!selectedPatient) {
+            <div class="patient-search">
+              <div class="search-bar-inline">
+                <input type="text" [(ngModel)]="patientSearchQuery"
+                  [ngModelOptions]="{ standalone: true }"
+                  (keyup.enter)="searchPatient()"
+                  placeholder="Search patient by name, phone, or UHID..." />
+                <button type="button" class="btn-search" (click)="searchPatient()">
+                  <i class="pi pi-search"></i>
+                </button>
+              </div>
+              @if (patientResults.length > 0) {
+                <div class="patient-results">
+                  @for (p of patientResults; track p.id) {
+                    <div class="patient-result-item" (click)="selectPatient(p)">
+                      <span class="pr-name">{{ p.firstName }} {{ p.lastName }}</span>
+                      <span class="pr-uhid">{{ p.uhid }}</span>
+                      <span class="pr-phone">{{ p.phone }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="selected-patient-card">
+              <div class="sp-info">
+                <i class="pi pi-user"></i>
+                <span class="sp-name">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</span>
+                <span class="sp-uhid">{{ selectedPatient.uhid }}</span>
+              </div>
+              <button type="button" class="btn-icon-sm" (click)="clearPatient()">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          }
+          @if (isInvalid('patientId')) {
+            <small class="error-text">Patient selection is required</small>
+          }
+        </div>
+
+        <!-- Appointment Selection (Required) -->
+        @if (selectedPatient) {
+          <div class="form-section">
+            <h3>Select Appointment *</h3>
+            @if (loadingAppointments) {
+              <div class="loading-inline"><i class="pi pi-spin pi-spinner"></i> Loading appointments...</div>
+            }
+            @if (!loadingAppointments && patientAppointments.length === 0) {
+              <div class="warning-banner">
+                <i class="pi pi-exclamation-triangle"></i>
+                No scheduled appointments found for this patient. Patient must have a booked appointment before check-in.
+              </div>
+            }
+            @if (patientAppointments.length > 0) {
+              <div class="appointment-options">
+                @for (apt of patientAppointments; track apt.id) {
+                  <div class="appointment-option"
+                       [class.selected]="checkinForm.get('appointmentId')?.value === apt.id"
+                       (click)="selectAppointment(apt)">
+                    <div class="apt-time">{{ apt.appointmentTime | date:'short' }}</div>
+                    <div class="apt-doctor">Dr. {{ apt.doctorName || apt.doctorId }}</div>
+                    <div class="apt-status">{{ apt.status }}</div>
+                  </div>
+                }
+              </div>
+            }
+            @if (isInvalid('appointmentId')) {
+              <small class="error-text">Appointment selection is required</small>
+            }
+          </div>
+        }
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="doctorId">Doctor *</label>
+            <select id="doctorId" formControlName="doctorId">
+              <option [ngValue]="null" disabled>Select a doctor</option>
+              @for (doctor of doctors; track doctor.id) {
+                <option [ngValue]="doctor.id">{{ doctor.username }}</option>
+              }
+            </select>
+            @if (isInvalid('doctorId')) {
+              <small class="error-text">Doctor is required</small>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="visitType">Visit Type *</label>
+            <select id="visitType" formControlName="visitType">
+              <option value="OPD">OPD - Out Patient</option>
+              <option value="IPD">IPD - In Patient</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="goBack()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="submitting">
+            @if (submitting) {
+              <i class="pi pi-spin pi-spinner"></i> Checking in...
+            } @else {
+              <i class="pi pi-sign-in"></i> Check In
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+    }
+  }
+
+  <!-- VIEW MODE -->
+  @if (mode === 'view') {
+    <div class="page-header">
+      <button class="btn-back" (click)="goBack()"><i class="pi pi-arrow-left"></i></button>
+      <h1>Encounter Details</h1>
+    </div>
+
+    @if (loading) {
+      <div class="loading-state">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem;"></i>
+        <p>Loading encounter...</p>
+      </div>
+    }
+
+    @if (!loading && encounter) {
+      <div class="detail-card">
+        <div class="detail-header">
+          <span class="enc-number">{{ encounter.encounterNumber }}</span>
+          <span class="status-badge" [attr.data-status]="encounter.status">{{ encounter.status }}</span>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Patient</label>
+            <span>{{ encounter.patientName || 'Patient #' + encounter.patientId }}</span>
+          </div>
+          <div class="detail-item">
+            <label>UHID</label>
+            <span>{{ encounter.patientUhid || '-' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Doctor</label>
+            <span>{{ encounter.doctorName || 'Doctor #' + encounter.doctorId }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Visit Type</label>
+            <span class="visit-type" [attr.data-type]="encounter.visitType">{{ encounter.visitType }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Appointment</label>
+            <span>{{ encounter.appointmentId ? '#' + encounter.appointmentId : 'Walk-in' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Episode</label>
+            <span>{{ encounter.episodeId ? '#' + encounter.episodeId : 'None' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Created At</label>
+            <span>{{ encounter.createdAt | date:'medium' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>Created By</label>
+            <span>{{ encounter.createdBy }}</span>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <!-- <button class="btn-primary" (click)="createBill()">
+            <i class="pi pi-money-bill"></i> Create Bill
+          </button> -->
+        </div>
+      </div>
+
+      <!-- Appointment Information -->
+      @if (appointmentDetails) {
+        <div class="detail-card" style="margin-top: 1rem;">
+          <div class="detail-header">
+            <span class="enc-number">Appointment Information</span>
+            <span class="status-badge" [attr.data-status]="appointmentDetails.status">{{ appointmentDetails.status }}</span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Doctor</label>
+              <span>{{ appointmentDetails.doctorName || 'Doctor #' + appointmentDetails.doctorId }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Appointment Time</label>
+              <span>{{ appointmentDetails.appointmentTime | date:'medium' }}</span>
+            </div>
+            @if (appointmentDetails.reasonForVisit) {
+              <div class="detail-item full-width">
+                <label>Reason for Visit</label>
+                <span>{{ appointmentDetails.reasonForVisit }}</span>
+              </div>
+            }
+            @if (appointmentDetails.notes) {
+              <div class="detail-item full-width">
+                <label>Notes</label>
+                <span>{{ appointmentDetails.notes }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Episode Status -->
+      @if (encounter!.episodeId) {
+        <div class="detail-card" style="margin-top: 1rem;">
+          <div class="detail-header">
+            <span class="enc-number">Episode</span>
+          </div>
+          <div class="episode-linked">
+            <i class="pi pi-check-circle" style="color: #059669;"></i>
+            <span>Episode #{{ encounter!.episodeId }} linked to this encounter</span>
+          </div>
+        </div>
+      }
+
+      <!-- Consultation Details -->
+      @if (consultation) {
+        <div class="detail-card" style="margin-top: 1rem;">
+          <div class="detail-header">
+            <span class="enc-number">Consultation Details</span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Diagnosis</label>
+              <span>{{ consultation.diagnosis }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Prescription</label>
+              <span>{{ consultation.prescription }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Symptoms</label>
+              <span>{{ consultation.symptoms || '-' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Doctor Notes</label>
+              <span>{{ consultation.doctorNotes || '-' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Tests Requested</label>
+              <span>{{ consultation.testsRequested || '-' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Follow-up Date</label>
+              <span>{{ consultation.followupDate || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Billing Information -->
+      @if (bill) {
+        <div class="detail-card" style="margin-top: 1rem;">
+          <div class="detail-header">
+            <span class="enc-number">Billing Information</span>
+            <span class="status-badge" [attr.data-status]="bill.paymentStatus">{{ bill.paymentStatus }}</span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Bill #</label>
+              <span>{{ bill.billNumber }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Total Amount</label>
+              <span>{{ bill.totalAmount | currency:'INR':'symbol':'1.0-0' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Paid Amount</label>
+              <span>{{ bill.paidAmount | currency:'INR':'symbol':'1.0-0' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Payment Method</label>
+              <span>{{ bill.paymentMethod || '-' }}</span>
+            </div>
+          </div>
+          @if (bill.items && bill.items.length > 0) {
+            <div class="bill-items-section">
+              <div class="bill-items-label">Services</div>
+              <table class="bill-items-table">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of bill.items; track item.id) {
+                    <tr>
+                      <td>{{ item.serviceName }}</td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ item.price | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ item.subtotal | currency:'INR':'symbol':'1.0-0' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</div>

@@ -1,0 +1,198 @@
+<div class="appointment-list-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <i class="pi pi-calendar"></i>
+      </div>
+      <div>
+        <h1>Appointments</h1>
+        <p class="header-subtitle">
+          @if (userRole === 'DOCTOR') { Your scheduled appointments }
+          @else { Manage patient appointments }
+        </p>
+      </div>
+    </div>
+    @if (userRole !== 'DOCTOR' && userRole !== 'NURSE' ) {
+      <button class="btn-primary" (click)="bookNewAppointment()">
+        <i class="pi pi-plus"></i> Book Appointment
+      </button>
+    }
+  </div>
+
+  <!-- Date Filter -->
+  <div class="date-filter">
+    <label for="dateFilter">Filter by date:</label>
+    <input type="date" id="dateFilter" [(ngModel)]="selectedDate" (change)="onDateChange(selectedDate)" />
+    @if (userRole === 'DOCTOR') {
+      <button class="btn-secondary btn-sm" (click)="selectedDate = ''; loadDoctorAppointments()">All</button>
+    } @else {
+      <button class="btn-secondary btn-sm" (click)="selectedDate = ''; loadTodayAppointments()">Today</button>
+    }
+  </div>
+
+  <!-- Patient Search (non-doctor only) -->
+  @if (userRole !== 'DOCTOR') {
+    @if (!selectedPatient) {
+      <div class="search-card">
+        <div class="search-card-header">
+          <i class="pi pi-search"></i>
+          <span>Filter by Patient</span>
+        </div>
+        <div class="search-bar">
+          <div class="search-input-wrapper">
+            <i class="pi pi-search search-icon"></i>
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchInput()"
+              (keyup.enter)="searchPatient()"
+              placeholder="Search patient by name, phone, or UHID..."
+              class="search-input"
+            />
+            @if (searchQuery) {
+              <button class="btn-clear" (click)="searchQuery = ''; onSearchInput()" title="Clear">
+                <i class="pi pi-times"></i>
+              </button>
+            }
+          </div>
+          <button class="btn-search" (click)="searchPatient()">
+            <i class="pi pi-search"></i> Search
+          </button>
+        </div>
+
+        @if (searchingPatient) {
+          <div class="search-loading"><i class="pi pi-spin pi-spinner"></i> Searching...</div>
+        }
+
+        @if (searchResults.length > 0) {
+          <div class="search-results">
+            @for (p of searchResults; track p.id) {
+              <div class="search-result-item" (click)="selectPatient(p)">
+                <div class="result-info">
+                  <div class="result-avatar">{{ p.firstName.charAt(0) }}</div>
+                  <span class="result-name">{{ p.firstName }} {{ p.lastName }}</span>
+                  <span class="result-uhid">{{ p.uhid }}</span>
+                </div>
+                <span class="result-phone"><i class="pi pi-phone"></i> {{ p.phone }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Selected Patient -->
+    @if (selectedPatient) {
+      <div class="selected-patient">
+        <div class="patient-info">
+          <div class="patient-avatar-sm">{{ selectedPatient.firstName.charAt(0) }}</div>
+          <div class="patient-details">
+            <span class="patient-name">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</span>
+            <span class="patient-uhid">{{ selectedPatient.uhid }}</span>
+          </div>
+        </div>
+        <button class="btn-icon-sm" (click)="clearPatient()" title="Clear selection">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    }
+  }
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading appointments...</p>
+    </div>
+  }
+
+  <!-- Appointment Table -->
+  @if (!loading && appointments.length > 0) {
+    <div class="results-header">
+      <span class="results-count">
+        {{ appointments.length }} appointment{{ appointments.length > 1 ? 's' : '' }}
+        @if (viewMode === 'today' && userRole !== 'DOCTOR') { today }
+      </span>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Patient</th>
+            <th>UHID</th>
+            <th>Date & Time</th>
+            <th>Doctor</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (apt of appointments; track apt.id) {
+            <tr>
+              <td><span class="id-badge">#{{ apt.id }}</span></td>
+              <td>{{ apt.patientName || 'Patient #' + apt.patientId }}</td>
+              <td><span class="uhid-badge">{{ apt.patientUhid || '-' }}</span></td>
+              <td>{{ apt.appointmentTime | date:'medium' }}</td>
+              <td>{{ apt.doctorName || 'Doctor #' + apt.doctorId }}</td>
+              <td>{{ apt.reasonForVisit || '-' }}</td>
+              <td>
+                <span class="status-badge" [attr.data-status]="apt.status">{{ apt.status }}</span>
+              </td>
+              <td class="actions-cell">
+                @if (userRole !== 'DOCTOR') {
+                  @if (apt.status === 'SCHEDULED') {
+                    <button class="btn-sm btn-check" (click)="updateStatus(apt, 'CHECKED_IN')" title="Check In">
+                      <i class="pi pi-sign-in"></i> Check In
+                    </button>
+                    <button class="btn-sm btn-cancel" (click)="updateStatus(apt, 'CANCELLED')" title="Cancel">
+                      <i class="pi pi-times"></i>
+                    </button>
+                  }
+                  @if (apt.status === 'CHECKED_IN') {
+                    <button class="btn-sm btn-complete" (click)="updateStatus(apt, 'COMPLETED')" title="Complete">
+                      <i class="pi pi-check"></i> Complete
+                    </button>
+                    <button class="btn-sm btn-noshow" (click)="updateStatus(apt, 'NO_SHOW')" title="No Show">
+                      No Show
+                    </button>
+                  }
+                  @if (userRole === 'ADMIN') {
+                    <button class="btn-sm btn-delete" (click)="deleteAppointment(apt)" title="Delete">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  }
+                }
+                @if (userRole === 'DOCTOR') {
+                  <span class="readonly-badge">View Only</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (!loading && appointments.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon"><i class="pi pi-calendar"></i></div>
+      <h3>No appointments found</h3>
+      @if (userRole === 'DOCTOR') {
+        <p>No appointments found for your schedule</p>
+      } @else if (viewMode === 'today') {
+        <p>No appointments scheduled for today</p>
+      } @else {
+        <p>This patient has no appointments yet</p>
+      }
+      @if (userRole !== 'DOCTOR') {
+        <button class="btn-primary" (click)="bookNewAppointment()">
+          <i class="pi pi-plus"></i> Book Appointment
+        </button>
+      }
+    </div>
+  }
+</div>
+
+<p-toast></p-toast>

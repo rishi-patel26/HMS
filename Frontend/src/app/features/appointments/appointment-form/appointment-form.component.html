@@ -1,0 +1,124 @@
+<div class="appointment-form-page">
+  <div class="page-header">
+    <button class="btn-back" (click)="goBack()">
+      <i class="pi pi-arrow-left"></i>
+    </button>
+    <h1>Book Appointment</h1>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i>
+      {{ errorMessage }}
+    </div>
+  }
+
+  @if (initialized) {
+  <div class="form-card">
+    <form [formGroup]="appointmentForm" (ngSubmit)="onSubmit()">
+
+      <!-- Patient Selection -->
+      <div class="form-section">
+        <h3>Select Patient</h3>
+        @if (!selectedPatient) {
+          <div class="patient-search">
+            <div class="search-bar-inline">
+              <input
+                type="text"
+                [(ngModel)]="patientSearchQuery"
+                [ngModelOptions]="{ standalone: true }"
+                (keyup.enter)="searchPatient()"
+                placeholder="Search patient by name, phone, or UHID..."
+              />
+              <button type="button" class="btn-search" (click)="searchPatient()">
+                <i class="pi pi-search"></i>
+              </button>
+            </div>
+
+            @if (patientResults.length > 0) {
+              <div class="patient-results">
+                @for (p of patientResults; track p.id) {
+                  <div class="patient-result-item" (click)="selectPatient(p)">
+                    <span class="pr-name">{{ p.firstName }} {{ p.lastName }}</span>
+                    <span class="pr-uhid">{{ p.uhid }}</span>
+                    <span class="pr-phone">{{ p.phone }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="selected-patient-card">
+            <div class="sp-info">
+              <i class="pi pi-user"></i>
+              <span class="sp-name">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</span>
+              <span class="sp-uhid">{{ selectedPatient.uhid }}</span>
+            </div>
+            <button type="button" class="btn-icon-sm" (click)="clearPatient()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        }
+        @if (isInvalid('patientId')) {
+          <small class="error-text">Patient selection is required</small>
+        }
+      </div>
+
+      <!-- Appointment Details -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="doctorId">Doctor <span class="required">*</span></label>
+          <select id="doctorId" formControlName="doctorId">
+            <option [ngValue]="null" disabled>Select a doctor</option>
+            @for (doctor of doctors; track doctor.id) {
+              <option [ngValue]="doctor.id">{{ doctor.username }}</option>
+            }
+          </select>
+          @if (isInvalid('doctorId')) {
+            <small class="error-text"><i class="pi pi-exclamation-circle"></i> Doctor selection is required</small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="appointmentTime">Appointment Date & Time <span class="required">*</span></label>
+          <input id="appointmentTime" type="datetime-local" formControlName="appointmentTime" />
+          @if (isInvalid('appointmentTime')) {
+            <small class="error-text"><i class="pi pi-exclamation-circle"></i> Appointment time is required</small>
+          }
+        </div>
+
+        <div class="form-group full-width">
+          <label for="reasonForVisit">
+            Reason for Visit <span class="required">*</span>
+            <span class="char-count"
+              [class.char-count--ok]="(appointmentForm.get('reasonForVisit')?.value?.length || 0) <= 10"
+              [class.char-count--error]="isInvalid('reasonForVisit')">
+              {{ appointmentForm.get('reasonForVisit')?.value?.length || 0 }}/10 max
+            </span>
+          </label>
+          <textarea id="reasonForVisit" formControlName="reasonForVisit" rows="2"
+            placeholder="Describe the reason for this visit (maximum 10 characters)..."></textarea>
+          @if (isInvalid('reasonForVisit')) {
+            @if (appointmentForm.get('reasonForVisit')?.hasError('required')) {
+              <small class="error-text"><i class="pi pi-exclamation-circle"></i> Reason for visit is required</small>
+            } @else if (appointmentForm.get('reasonForVisit')?.hasError('maxlength')) {
+              <small class="error-text"><i class="pi pi-exclamation-circle"></i> Reason must be at most 10 characters (currently {{ appointmentForm.get('reasonForVisit')?.value?.length || 0 }})</small>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="goBack()">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="submitting">
+          @if (submitting) {
+            <i class="pi pi-spin pi-spinner"></i> Booking...
+          } @else {
+            <i class="pi pi-calendar-plus"></i> Book Appointment
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+  }
+</div>

@@ -1,0 +1,194 @@
+<div class="patient-profile-page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem;"></i>
+      <p>Loading patient profile...</p>
+    </div>
+  }
+
+  @if (!loading && patient) {
+    <div class="page-header">
+      <div class="header-left">
+        <button class="btn-back" (click)="goBack()">
+          <i class="pi pi-arrow-left"></i>
+        </button>
+        <div>
+          <h1>{{ patient.firstName }} {{ patient.lastName }}</h1>
+          <span class="uhid-badge">{{ patient.uhid }}</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" (click)="bookAppointment()">
+          <i class="pi pi-calendar-plus"></i> Book Appointment
+        </button>
+        <!-- <button class="btn-primary" (click)="checkIn()">
+          <i class="pi pi-sign-in"></i> Check In
+        </button> -->
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab" [class.active]="activeTab === 'info'" (click)="setTab('info')">Patient Info</button>
+      <button class="tab" [class.active]="activeTab === 'appointments'" (click)="setTab('appointments')">
+        Appointments ({{ appointments.length }})
+      </button>
+      <button class="tab" [class.active]="activeTab === 'encounters'" (click)="setTab('encounters')">
+        Encounters ({{ encounters.length }})
+      </button>
+      <button class="tab" [class.active]="activeTab === 'episodes'" (click)="setTab('episodes')">
+        Episodes ({{ episodes.length }})
+      </button>
+    </div>
+
+    <!-- Patient Info Tab -->
+    @if (activeTab === 'info') {
+      <div class="info-card">
+        <div class="info-grid">
+          <div class="info-item">
+            <label>First Name</label>
+            <span>{{ patient.firstName }}</span>
+          </div>
+          <div class="info-item">
+            <label>Last Name</label>
+            <span>{{ patient.lastName }}</span>
+          </div>
+          <div class="info-item">
+            <label>Gender</label>
+            <span>{{ patient.gender }}</span>
+          </div>
+          <div class="info-item">
+            <label>Date of Birth</label>
+            <span>{{ patient.dob }}</span>
+          </div>
+          <div class="info-item">
+            <label>Phone</label>
+            <span>{{ patient.phone }}</span>
+          </div>
+          <div class="info-item">
+            <label>Email</label>
+            <span>{{ patient.email || '-' }}</span>
+          </div>
+          <div class="info-item full-width">
+            <label>Address</label>
+            <span>{{ patient.address || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Registered On</label>
+            <span>{{ patient.createdAt }}</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Appointments Tab -->
+    @if (activeTab === 'appointments') {
+      <div class="tab-content">
+        @if (appointments.length > 0) {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date/Time</th>
+                  <th>Doctor</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (apt of appointments; track apt.id) {
+                  <tr>
+                    <td>#{{ apt.id }}</td>
+                    <td>{{ apt.appointmentTime | date:'medium' }}</td>
+                    <td>{{ apt.doctorName || 'Doctor #' + apt.doctorId }}</td>
+                    <td>{{ apt.reasonForVisit || '-' }}</td>
+                    <td><span class="status-badge" [attr.data-status]="apt.status">{{ apt.status }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-tab">No appointments found</div>
+        }
+      </div>
+    }
+
+    <!-- Encounters Tab -->
+    @if (activeTab === 'encounters') {
+      <div class="tab-content">
+        @if (encounters.length > 0) {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Encounter #</th>
+                  <th>Visit Type</th>
+                  <th>Doctor</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (enc of encounters; track enc.id) {
+                  <tr>
+                    <td><span class="uhid-badge">{{ enc.encounterNumber }}</span></td>
+                    <td>{{ enc.visitType }}</td>
+                    <td>{{ enc.doctorName || 'Doctor #' + enc.doctorId }}</td>
+                    <td><span class="status-badge" [attr.data-status]="enc.status">{{ enc.status }}</span></td>
+                    <td>{{ enc.createdAt | date:'medium' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-tab">No encounters found</div>
+        }
+      </div>
+    }
+
+    <!-- Episodes Tab -->
+    @if (activeTab === 'episodes') {
+      <div class="tab-content">
+        @if (episodes.length > 0) {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ep of episodes; track ep.id) {
+                  <tr>
+                    <td>{{ ep.episodeType }}</td>
+                    <td>{{ ep.description }}</td>
+                    <td>{{ ep.startDate }}{{ ep.startTime ? ' ' + ep.startTime : '' }}</td>
+                    <td>{{ ep.endDate ? ep.endDate + (ep.endTime ? ' ' + ep.endTime : '') : '-' }}</td>
+                    <td><span class="status-badge" [attr.data-status]="ep.status">{{ ep.status }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-tab">No episodes found</div>
+        }
+      </div>
+    }
+  }
+
+  @if (!loading && !patient) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle" style="font-size: 3rem; color: #f59e0b;"></i>
+      <p>Patient not found</p>
+      <button class="btn-primary" (click)="goBack()">Back to Patients</button>
+    </div>
+  }
+</div>

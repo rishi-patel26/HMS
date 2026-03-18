@@ -1,0 +1,131 @@
+<div class="create-bill-page">
+  <div class="page-header">
+    <button class="btn-back" (click)="goBack()"><i class="pi pi-arrow-left"></i></button>
+    <h1>Create Bill</h1>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
+    </div>
+  }
+
+  <div class="form-card">
+    <div class="form-section">
+      <h3>Find Patient</h3>
+      <p class="section-desc">Search for a patient by name, phone, or UHID to view their encounters</p>
+
+      <!-- Patient Search -->
+      @if (!selectedPatient) {
+        <div class="patient-search">
+          <div class="search-bar-inline">
+            <input
+              type="text"
+              [(ngModel)]="patientSearchQuery"
+              (keyup.enter)="searchPatient()"
+              placeholder="Search patient by name, phone, or UHID..."
+            />
+            <button type="button" class="btn-search" (click)="searchPatient()" [disabled]="searchingPatient">
+              @if (searchingPatient) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-search"></i>
+              }
+            </button>
+          </div>
+
+          @if (patientResults.length > 0) {
+            <div class="patient-results">
+              @for (p of patientResults; track p.id) {
+                <div class="patient-result-item" (click)="selectPatient(p)">
+                  <div class="result-avatar">{{ p.firstName.charAt(0) }}</div>
+                  <span class="pr-name">{{ p.firstName }} {{ p.lastName }}</span>
+                  <span class="pr-uhid">{{ p.uhid }}</span>
+                  <span class="pr-phone"><i class="pi pi-phone"></i> {{ p.phone }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- Selected Patient Card -->
+        <div class="selected-patient-card">
+          <div class="sp-info">
+            <div class="sp-avatar">{{ selectedPatient.firstName.charAt(0) }}</div>
+            <div class="sp-details">
+              <span class="sp-name">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</span>
+              <span class="sp-uhid">{{ selectedPatient.uhid }}</span>
+            </div>
+          </div>
+          <button type="button" class="btn-icon-sm" (click)="clearSelection()" title="Clear selection">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Encounters Section -->
+  @if (selectedPatient) {
+    <div class="form-card encounters-section">
+      <div class="form-section">
+        <h3>Select Encounter</h3>
+        <p class="section-desc">Choose an encounter to create a bill for</p>
+
+        @if (loadingEncounters) {
+          <div class="loading-state">
+            <i class="pi pi-spin pi-spinner"></i>
+            <p>Loading encounters...</p>
+          </div>
+        }
+
+        @if (!loadingEncounters && patientEncounters.length > 0) {
+          <div class="encounter-cards">
+            @for (enc of patientEncounters; track enc.id) {
+              <div class="encounter-card" [attr.data-status]="enc.status">
+                <div class="card-header">
+                  <span class="enc-number">{{ enc.encounterNumber }}</span>
+                  <span class="status-badge" [attr.data-status]="enc.status">{{ enc.status }}</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-detail">
+                    <span class="detail-label">Visit Type</span>
+                    <span class="detail-value visit-type" [attr.data-type]="enc.visitType">{{ enc.visitType }}</span>
+                  </div>
+                  <div class="card-detail">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value">{{ enc.status }}</span>
+                  </div>
+                  <div class="card-detail">
+                    <span class="detail-label">Date</span>
+                    <span class="detail-value">{{ enc.createdAt }}</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button
+                    class="btn-primary btn-create-bill"
+                    (click)="createBillForEncounter(enc)"
+                    [disabled]="submitting">
+                    @if (submitting && submittingEncounterId === enc.id) {
+                      <i class="pi pi-spin pi-spinner"></i> Creating...
+                    } @else {
+                      <i class="pi pi-money-bill"></i> Create Bill
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (!loadingEncounters && patientEncounters.length === 0 && selectedPatient) {
+          <div class="empty-state">
+            <div class="empty-icon"><i class="pi pi-list"></i></div>
+            <h3>No encounters found</h3>
+            <p>This patient has no encounters yet</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

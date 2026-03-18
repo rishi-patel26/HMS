@@ -1,0 +1,206 @@
+<div class="catalog-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <i class="pi pi-box"></i>
+      </div>
+      <div>
+        <h1>Service Catalog</h1>
+        <p class="subtitle">Manage hospital services and pricing</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="toggleForm()">
+      <i class="pi" [class.pi-plus]="!showForm" [class.pi-times]="showForm"></i>
+      {{ showForm ? 'Cancel' : 'Add Service' }}
+    </button>
+  </div>
+
+  <!-- Summary Stats -->
+  @if (!loading) {
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">{{ services.length }}</div>
+        <div class="stat-label">Total Services</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value active-text">{{ activeCount }}</div>
+        <div class="stat-label">Active</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value inactive-text">{{ services.length - activeCount }}</div>
+        <div class="stat-label">Inactive</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ categoryCount }}</div>
+        <div class="stat-label">Categories</div>
+      </div>
+    </div>
+  }
+
+  <!-- Add/Edit Form -->
+  @if (showForm) {
+    <div class="card form-card">
+      <h2>{{ editingId ? 'Edit Service' : 'New Service' }}</h2>
+      <form [formGroup]="serviceForm" (ngSubmit)="saveService()">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="serviceName">Service Name <span class="required">*</span></label>
+            <input
+              id="serviceName"
+              type="text"
+              formControlName="name"
+              class="form-input"
+              placeholder="e.g., General Consultation" />
+            @if (serviceForm.get('name')?.invalid && serviceForm.get('name')?.touched) {
+              <small class="error-text">Service name is required</small>
+            }
+          </div>
+          <div class="form-group">
+            <label for="serviceCategory">Category <span class="required">*</span></label>
+            <select id="serviceCategory" formControlName="category" class="form-input">
+              <option value="">Select category</option>
+              <option value="CONSULTATION">Consultation</option>
+              <option value="LAB">Lab</option>
+              <option value="RADIOLOGY">Radiology</option>
+              <option value="PROCEDURE">Procedure</option>
+              <option value="SURGERY">Surgery</option>
+              <option value="PHARMACY">Pharmacy</option>
+              <option value="ROOM">Room & Board</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="servicePrice">Price <span class="required">*</span></label>
+            <div class="price-input-wrapper">
+              <span class="currency-prefix">&#8377;</span>
+              <input
+                id="servicePrice"
+                type="number"
+                formControlName="price"
+                class="form-input price-field"
+                placeholder="0.00"
+                step="0.01"
+                min="0" />
+            </div>
+            @if (serviceForm.get('price')?.invalid && serviceForm.get('price')?.touched) {
+              <small class="error-text">A valid price is required</small>
+            }
+          </div>
+          <div class="form-group">
+            <label for="serviceDescription">Description</label>
+            <input
+              id="serviceDescription"
+              type="text"
+              formControlName="description"
+              class="form-input"
+              placeholder="Brief service description" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="serviceForm.invalid || saving">
+            @if (saving) {
+              <i class="pi pi-spin pi-spinner"></i> Saving...
+            } @else {
+              {{ editingId ? 'Update Service' : 'Create Service' }}
+            }
+          </button>
+          @if (editingId) {
+            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
+              Cancel Edit
+            </button>
+          }
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Filter Bar -->
+  @if (services.length > 0 && !loading) {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Category</span>
+        <div class="filter-chips">
+          <button class="chip" [class.active]="filterCategory === ''" (click)="filterCategory = ''">All</button>
+          @for (cat of categories; track cat) {
+            <button class="chip" [class.active]="filterCategory === cat" (click)="filterCategory = cat">
+              {{ formatCategory(cat) }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Status</span>
+        <div class="filter-chips">
+          <button class="chip" [class.active]="filterStatus === ''" (click)="filterStatus = ''">All</button>
+          <button class="chip" [class.active]="filterStatus === 'active'" (click)="filterStatus = 'active'">Active</button>
+          <button class="chip" [class.active]="filterStatus === 'inactive'" (click)="filterStatus = 'inactive'">Inactive</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Service Cards Grid -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Loading services...</span>
+    </div>
+  } @else if (filteredServices.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i class="pi pi-box"></i>
+      </div>
+      @if (services.length === 0) {
+        <h3>No services yet</h3>
+        <p>Add your first service to get started.</p>
+      } @else {
+        <h3>No matching services</h3>
+        <p>Try adjusting your filters to find what you're looking for.</p>
+      }
+    </div>
+  } @else {
+    <div class="service-grid">
+      @for (service of filteredServices; track service.id) {
+        <div class="service-card" [class.inactive-card]="!service.active">
+          <div class="card-header">
+            <span class="category-badge" [attr.data-cat]="service.category">
+              {{ formatCategory(service.category) }}
+            </span>
+            <div class="card-actions">
+              <button
+                class="btn-icon"
+                (click)="editService(service)"
+                title="Edit service">
+                <i class="pi pi-pencil"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <h3 class="service-name">{{ service.name }}</h3>
+            @if (service.description) {
+              <p class="service-desc">{{ service.description }}</p>
+            }
+            <div class="service-price">{{ service.price | currency:'INR':'symbol':'1.0-0' }}</div>
+          </div>
+
+          <div class="card-footer">
+            <div class="status-toggle">
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  [checked]="service.active"
+                  (change)="toggleServiceStatus(service)" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="status-label" [class.active]="service.active" [class.inactive]="!service.active">
+                {{ service.active ? 'Active' : 'Disabled' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<p-toast></p-toast>

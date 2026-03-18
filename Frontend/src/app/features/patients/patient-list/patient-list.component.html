@@ -1,0 +1,154 @@
+<div class="patient-list-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <i class="pi pi-users"></i>
+      </div>
+      <div>
+        <h1>Patient Management</h1>
+        <p class="header-subtitle">Search and manage patient records</p>
+      </div>
+    </div>
+    @if (userRole !== 'DOCTOR' && userRole !== 'NURSE') {
+    <button class="btn-primary" (click)="openNewPatientForm()">
+      <i class="pi pi-plus"></i> Register Patient
+    </button>
+    }
+  </div>
+
+  <div class="search-card">
+    <div class="search-card-header">
+      <i class="pi pi-search"></i>
+      <span>Find Patient</span>
+    </div>
+    <div class="search-bar">
+      <div class="search-input-wrapper">
+        <i class="pi pi-search search-icon"></i>
+        <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchInput()" (keyup.enter)="searchPatients()"
+          placeholder="Search by name, phone number, or UHID..." class="search-input" />
+        @if (searchQuery) {
+        <button class="btn-clear" (click)="searchQuery = ''; onSearchInput()" title="Clear">
+          <i class="pi pi-times"></i>
+        </button>
+        }
+      </div>
+      <button class="btn-search" (click)="searchPatients()">
+        <i class="pi pi-search"></i> Search
+      </button>
+    </div>
+    <div class="search-hints">
+      <span class="hint-chip"><i class="pi pi-user"></i> Name</span>
+      <span class="hint-chip"><i class="pi pi-phone"></i> Phone</span>
+      <span class="hint-chip"><i class="pi pi-id-card"></i> UHID</span>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="loading-state">
+    <i class="pi pi-spin pi-spinner"></i>
+    <p>Loading patients...</p>
+  </div>
+  }
+
+  @if (!loading && patients.length > 0) {
+  <div class="results-header">
+    <span class="results-count">
+      @if (searched) {
+      {{ patients.length }} patient{{ patients.length > 1 ? 's' : '' }} found
+      } @else {
+      Recent Patients ({{ patients.length }})
+      }
+    </span>
+  </div>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>UHID</th>
+          <th>Patient Name</th>
+          <th>Gender</th>
+          <th>Date of Birth</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (patient of patients; track patient.id) {
+        <tr>
+          <td><span class="uhid-badge">{{ patient.uhid }}</span></td>
+          <td class="name-cell">
+            <div class="patient-avatar">{{ patient.firstName.charAt(0) }}{{ patient.lastName.charAt(0) }}</div>
+            <span>{{ patient.firstName }} {{ patient.lastName }}</span>
+          </td>
+          <td>
+            <span class="gender-badge" [attr.data-gender]="patient.gender">{{ patient.gender }}</span>
+          </td>
+          <td>{{ patient.dob }}</td>
+          <td>
+            <span class="phone-text"><i class="pi pi-phone"></i> {{ patient.phone }}</span>
+          </td>
+          <td>{{ patient.email || '-' }}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-action btn-view" (click)="openPatientProfile(patient.id)" title="View Profile">
+                <i class="pi pi-eye"></i>
+              </button>
+              @if (userRole !== 'DOCTOR') {
+
+              @if(userRole !== 'NURSE') {
+              <button class="btn-action btn-appt" (click)="bookAppointment(patient.id)" title="Book Appointment">
+                <i class="pi pi-calendar-plus"></i>
+              </button>
+              }
+
+              <button class="btn-action btn-checkin" (click)="checkInPatient(patient.id)" title="Check In">
+                <i class="pi pi-sign-in"></i>
+              </button>
+              }
+              @if (userRole === 'ADMIN') {
+              <button class="btn-action btn-delete" (click)="deletePatient(patient)" title="Delete Patient">
+                <i class="pi pi-trash"></i>
+              </button>
+              }
+            </div>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+
+  @if (!loading && searched && patients.length === 0) {
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="pi pi-users"></i>
+    </div>
+    <h3>No patients found</h3>
+    <p>No results for "<strong>{{ searchQuery }}</strong>". Try a different search term.</p>
+    @if (userRole !== 'DOCTOR') {
+    <button class="btn-primary" (click)="openNewPatientForm()">
+      <i class="pi pi-plus"></i> Register New Patient
+    </button>
+    }
+  </div>
+  }
+
+  @if (!loading && !searched && patients.length === 0) {
+  <div class="empty-state initial">
+    <div class="empty-icon">
+      <i class="pi pi-users"></i>
+    </div>
+    <h3>No patients registered yet</h3>
+    @if (userRole !== 'DOCTOR') {
+    <p>Register your first patient to get started</p>
+    <button class="btn-primary" (click)="openNewPatientForm()">
+      <i class="pi pi-plus"></i> Register New Patient
+    </button>
+    } @else {
+    <p>No patients found in the system yet</p>
+    }
+  </div>
+  }
+</div>

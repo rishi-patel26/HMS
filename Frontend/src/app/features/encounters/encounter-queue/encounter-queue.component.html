@@ -1,0 +1,191 @@
+<div class="encounter-queue-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <i class="pi pi-list"></i>
+      </div>
+      <div>
+        <h1>Encounter Queue</h1>
+        <p class="header-subtitle">
+          @if (userRole === 'DOCTOR') { Your patient encounters }
+          @else { Manage patient encounters and consultations }
+        </p>
+      </div>
+    </div>
+    @if (userRole !== 'DOCTOR') {
+      <button class="btn-primary" (click)="checkInPatient()">
+        <i class="pi pi-sign-in"></i> Check In Patient
+      </button>
+    }
+  </div>
+
+  <!-- Date Filter -->
+  <div class="date-filter">
+    <label for="dateFilter">Filter by date:</label>
+    <input type="date" id="dateFilter" [(ngModel)]="selectedDate" (change)="onDateChange(selectedDate)" />
+    @if (userRole === 'DOCTOR') {
+      <button class="btn-secondary btn-sm" (click)="selectedDate = ''; loadDoctorEncounters()">All</button>
+    } @else {
+      <button class="btn-secondary btn-sm" (click)="selectedDate = ''; loadTodayEncounters()">Today</button>
+    }
+  </div>
+
+  <!-- Patient Search (non-doctor only) -->
+  @if (userRole !== 'DOCTOR') {
+    @if (!selectedPatient) {
+      <div class="search-card">
+        <div class="search-card-header">
+          <i class="pi pi-search"></i>
+          <span>Filter by Patient</span>
+        </div>
+        <div class="search-bar">
+          <div class="search-input-wrapper">
+            <i class="pi pi-search search-icon"></i>
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchInput()"
+              (keyup.enter)="searchPatient()"
+              placeholder="Search patient by name, phone, or UHID..."
+              class="search-input"
+            />
+            @if (searchQuery) {
+              <button class="btn-clear" (click)="searchQuery = ''; onSearchInput()" title="Clear">
+                <i class="pi pi-times"></i>
+              </button>
+            }
+          </div>
+          <button class="btn-search" (click)="searchPatient()">
+            <i class="pi pi-search"></i> Search
+          </button>
+        </div>
+
+        @if (searchingPatient) {
+          <div class="search-loading"><i class="pi pi-spin pi-spinner"></i> Searching...</div>
+        }
+
+        @if (searchResults.length > 0) {
+          <div class="search-results">
+            @for (p of searchResults; track p.id) {
+              <div class="search-result-item" (click)="selectPatient(p)">
+                <div class="result-info">
+                  <div class="result-avatar">{{ p.firstName.charAt(0) }}</div>
+                  <span class="result-name">{{ p.firstName }} {{ p.lastName }}</span>
+                  <span class="result-uhid">{{ p.uhid }}</span>
+                </div>
+                <span class="result-phone"><i class="pi pi-phone"></i> {{ p.phone }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Selected Patient -->
+    @if (selectedPatient) {
+      <div class="selected-patient">
+        <div class="patient-info">
+          <div class="patient-avatar-sm">{{ selectedPatient.firstName.charAt(0) }}</div>
+          <div class="patient-details">
+            <span class="patient-name">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</span>
+            <span class="patient-uhid">{{ selectedPatient.uhid }}</span>
+          </div>
+        </div>
+        <button class="btn-icon-sm" (click)="clearPatient()" title="Clear">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    }
+  }
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading encounters...</p>
+    </div>
+  }
+
+  <!-- Encounter Cards -->
+  @if (!loading && encounters.length > 0) {
+    <div class="results-header">
+      <span class="results-count">
+        {{ encounters.length }} encounter{{ encounters.length > 1 ? 's' : '' }}
+        @if (viewMode === 'today' && userRole !== 'DOCTOR') { today }
+      </span>
+    </div>
+    <div class="encounter-cards">
+      @for (enc of encounters; track enc.id) {
+        <div class="encounter-card" [attr.data-status]="enc.status">
+          <div class="card-header">
+            <span class="enc-number">{{ enc.encounterNumber }}</span>
+            <span class="status-badge" [attr.data-status]="enc.status">{{ enc.status }}</span>
+          </div>
+          <div class="card-body">
+            <div class="card-detail">
+              <span class="detail-label">Patient</span>
+              <span class="detail-value">{{ enc.patientName || 'Patient #' + enc.patientId }}</span>
+            </div>
+            <div class="card-detail">
+              <span class="detail-label">UHID</span>
+              <span class="detail-value">{{ enc.patientUhid || '-' }}</span>
+            </div>
+            <div class="card-detail">
+              <span class="detail-label">Visit Type</span>
+              <span class="detail-value visit-type" [attr.data-type]="enc.visitType">{{ enc.visitType }}</span>
+            </div>
+            <div class="card-detail">
+              <span class="detail-label">Doctor</span>
+              <span class="detail-value">{{ enc.doctorName || 'Doctor #' + enc.doctorId }}</span>
+            </div>
+            <div class="card-detail">
+              <span class="detail-label">Created</span>
+              <span class="detail-value">{{ enc.createdAt | date:'short' }}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn-sm btn-view" (click)="viewDetails(enc.id)">
+              <i class="pi pi-eye"></i> View
+            </button>
+            @if (enc.status === 'WAITING') {
+              <button class="btn-sm btn-consult" (click)="updateStatus(enc, 'IN_CONSULTATION')">
+                <i class="pi pi-user-edit"></i> Start
+              </button>
+              @if (userRole !== 'DOCTOR') {
+                <button class="btn-sm btn-cancel" (click)="updateStatus(enc, 'CANCELLED')">
+                  <i class="pi pi-times"></i> Cancel
+                </button>
+              }
+            }
+            @if (enc.status === 'IN_CONSULTATION') {
+              <button class="btn-sm btn-complete" (click)="updateStatus(enc, 'COMPLETED')">
+                <i class="pi pi-check"></i> Complete
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (!loading && encounters.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon"><i class="pi pi-list"></i></div>
+      <h3>No encounters found</h3>
+      @if (userRole === 'DOCTOR') {
+        <p>You have no patient encounters yet</p>
+      } @else if (viewMode === 'today') {
+        <p>No encounters created today</p>
+      } @else {
+        <p>This patient has no encounters yet</p>
+      }
+      @if (userRole !== 'DOCTOR') {
+        <button class="btn-primary" (click)="checkInPatient()">
+          <i class="pi pi-sign-in"></i> Check In Patient
+        </button>
+      }
+    </div>
+  }
+</div>
+
+<p-toast></p-toast>

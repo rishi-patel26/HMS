@@ -1,0 +1,507 @@
+<div class="consultation-page">
+
+  <!-- ==================== QUEUE VIEW ==================== -->
+  @if (!encounter && !loadingConsultation) {
+    <div class="page-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <i class="pi pi-user-edit"></i>
+        </div>
+        <div>
+          <h1>Doctor Consultation</h1>
+          <p class="header-subtitle">Today's encounter queue</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-card">
+      <div class="search-bar">
+        <div class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input type="text" [(ngModel)]="searchQuery"
+                 (keyup.enter)="searchConsultations()"
+                 placeholder="Search consultations by patient name..."
+                 class="search-input" />
+        </div>
+        <button class="btn-search" (click)="searchConsultations()">
+          <i class="pi pi-search"></i> Search
+        </button>
+        @if (consultationHistory.length > 0) {
+          <button class="btn-secondary btn-sm" (click)="consultationHistory = []; searchQuery = ''">Clear</button>
+        }
+      </div>
+    </div>
+
+    <!-- Consultation Search Results (Clickable Cards) -->
+    @if (consultationHistory.length > 0) {
+      <div class="results-header">
+        <span class="results-count">{{ consultationHistory.length }} consultation(s) found — click to open</span>
+      </div>
+      <div class="consultation-search-results">
+        @for (c of consultationHistory; track c.id) {
+          <div class="consultation-result-card" (click)="selectConsultation(c)" title="Open consultation">
+            <div class="consult-card-header">
+              <div class="consult-patient-info">
+                <div class="consult-avatar">{{ (c.patientName || 'P').charAt(0) }}</div>
+                <div>
+                  <span class="consult-patient-name">{{ c.patientName || 'Patient #' + c.patientId }}</span>
+                  @if (c.patientUhid) {
+                    <span class="uhid-badge">{{ c.patientUhid }}</span>
+                  }
+                </div>
+              </div>
+              <div class="consult-meta">
+                <span class="consult-date">{{ c.createdAt | date:'mediumDate' }}</span>
+                <span class="consult-time">{{ c.createdAt | date:'shortTime' }}</span>
+              </div>
+            </div>
+            <div class="consult-card-body">
+              <div class="consult-row">
+                <span class="consult-label">Doctor</span>
+                <span class="consult-value">{{ c.doctorName || c.createdBy }}</span>
+              </div>
+              <div class="consult-row">
+                <span class="consult-label">Diagnosis</span>
+                <span class="consult-value">{{ c.diagnosis }}</span>
+              </div>
+              <div class="consult-row">
+                <span class="consult-label">Prescription</span>
+                <span class="consult-value">{{ c.prescription }}</span>
+              </div>
+              @if (c.symptoms) {
+                <div class="consult-row">
+                  <span class="consult-label">Symptoms</span>
+                  <span class="consult-value">{{ c.symptoms }}</span>
+                </div>
+              }
+              @if (c.testsRequested) {
+                <div class="consult-row">
+                  <span class="consult-label">Tests</span>
+                  <span class="consult-value">{{ c.testsRequested }}</span>
+                </div>
+              }
+              @if (c.doctorNotes) {
+                <div class="consult-row">
+                  <span class="consult-label">Notes</span>
+                  <span class="consult-value">{{ c.doctorNotes }}</span>
+                </div>
+              }
+              @if (c.followupDate) {
+                <div class="consult-row">
+                  <span class="consult-label">Follow-up</span>
+                  <span class="consult-value">{{ c.followupDate }}</span>
+                </div>
+              }
+            </div>
+            <div class="consult-card-footer">
+              <button class="btn-open-consult">
+                <i class="pi pi-arrow-right"></i> Open Consultation
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (errorMessage) {
+      <div class="error-banner">
+        <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
+      </div>
+    }
+
+    @if (loadingQueue) {
+      <div class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>Loading today's encounters...</p>
+      </div>
+    }
+
+    @if (!loadingQueue && encounters.length > 0) {
+      <div class="results-header" style="margin-top: 1rem;">
+        <span class="results-count">{{ encounters.length }} encounter{{ encounters.length > 1 ? 's' : '' }} today</span>
+      </div>
+      <div class="encounter-cards">
+        @for (enc of encounters; track enc.id) {
+          <div class="encounter-card" [attr.data-status]="enc.status" (click)="selectEncounter(enc)">
+            <div class="card-header">
+              <span class="enc-number">{{ enc.encounterNumber }}</span>
+              <span class="status-badge" [attr.data-status]="enc.status">{{ enc.status }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-detail">
+                <span class="detail-label">Visit Type</span>
+                <span class="detail-value visit-type" [attr.data-type]="enc.visitType">{{ enc.visitType }}</span>
+              </div>
+              <div class="card-detail">
+                <span class="detail-label">Patient</span>
+                <span class="detail-value">{{ enc.patientName || 'Patient #' + enc.patientId }}</span>
+              </div>
+              <div class="card-detail">
+                <span class="detail-label">UHID</span>
+                <span class="detail-value">{{ enc.patientUhid || '-' }}</span>
+              </div>
+              <div class="card-detail">
+                <span class="detail-label">Priority</span>
+                <span class="detail-value">{{ enc.priority || 'Normal' }}</span>
+              </div>
+              <div class="card-detail">
+                <span class="detail-label">Created</span>
+                <span class="detail-value">{{ enc.createdAt | date:'short' }}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <button class="btn-consult-card">
+                <i class="pi pi-arrow-right"></i> Open Consultation
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (!loadingQueue && encounters.length === 0 && consultationHistory.length === 0 && !errorMessage) {
+      <div class="empty-state">
+        <div class="empty-icon"><i class="pi pi-calendar"></i></div>
+        <h3>No encounters today</h3>
+        <p>There are no patient encounters in the queue for today. Use the search above to find past consultations.</p>
+      </div>
+    }
+  }
+
+  <!-- ==================== LOADING CONSULTATION ==================== -->
+  @if (loadingConsultation) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading consultation...</p>
+    </div>
+  }
+
+  <!-- ==================== CONSULTATION VIEW ==================== -->
+  @if (encounter && !loadingConsultation) {
+    <div class="page-header">
+      <div class="header-left">
+        <button class="btn-back" (click)="backToQueue()">
+          <i class="pi pi-arrow-left"></i>
+        </button>
+        <div>
+          <h1>{{ existingConsultation ? 'Update Consultation' : 'New Consultation' }}</h1>
+          <p class="header-subtitle">
+            Encounter: {{ encounter.encounterNumber }} | Visit: {{ encounter.visitType }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    @if (errorMessage) {
+      <div class="error-banner">
+        <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
+      </div>
+    }
+
+    <div class="content-grid">
+
+      <!-- ===== LEFT COLUMN: Info Panels ===== -->
+      <div class="info-column">
+
+        <!-- Patient Information Panel -->
+        @if (patient) {
+          <div class="detail-card">
+            <div class="card-label"><i class="pi pi-user"></i> Patient Information</div>
+            <div class="patient-header">
+              <div class="patient-avatar">{{ patient.firstName.charAt(0) }}{{ patient.lastName.charAt(0) }}</div>
+              <div>
+                <div class="patient-name">{{ patient.firstName }} {{ patient.lastName }}</div>
+                <div class="patient-uhid">{{ patient.uhid }}</div>
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Phone</label>
+                <span>{{ patient.phone || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <label>DOB</label>
+                <span>{{ patient.dob || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <label>Gender</label>
+                <span>{{ patient.gender }}</span>
+              </div>
+              <div class="info-item">
+                <label>Blood Group</label>
+                <span>{{ patient.bloodGroup || '-' }}</span>
+              </div>
+            </div>
+            @if (patient.allergies) {
+              <div class="allergy-warning">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>Allergies: {{ patient.allergies }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Encounter Details Panel -->
+        <div class="detail-card">
+          <div class="card-label"><i class="pi pi-list"></i> Encounter Details</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Encounter #</label>
+              <span>{{ encounter.encounterNumber }}</span>
+            </div>
+            <div class="info-item">
+              <label>Visit Type</label>
+              <span class="visit-type" [attr.data-type]="encounter.visitType">{{ encounter.visitType }}</span>
+            </div>
+            <div class="info-item">
+              <label>Status</label>
+              <span class="status-badge" [attr.data-status]="encounter.status">{{ encounter.status }}</span>
+            </div>
+            <div class="info-item">
+              <label>Date</label>
+              <span>{{ encounter.createdAt | date:'medium' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Episode Management -->
+        @if (userRole === 'DOCTOR' || userRole === 'ADMIN') {
+          <div class="detail-card">
+            <div class="card-label">
+              <i class="pi pi-bookmark"></i> Episode
+              @if (!encounter!.episodeId || changingEpisode) {
+                <button class="btn-ep-toggle" (click)="showEpisodeForm = !showEpisodeForm">
+                  <i class="pi" [class.pi-plus]="!showEpisodeForm" [class.pi-times]="showEpisodeForm"></i>
+                  {{ showEpisodeForm ? 'Cancel' : 'New Episode' }}
+                </button>
+              }
+            </div>
+
+            @if (encounter!.episodeId && !changingEpisode) {
+              @for (ep of episodes; track ep.id) {
+                @if (ep.id === encounter!.episodeId) {
+                  <div class="episode-linked-msg">
+                    <i class="pi pi-check-circle"></i>
+                    <div>
+                      <strong>{{ ep.episodeType }}</strong> — {{ ep.description }}
+                      <div class="episode-meta-small">
+                        <span class="ep-status-badge" [attr.data-status]="ep.status">{{ ep.status }}</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+              <button class="btn-change-ep" (click)="changingEpisode = true">
+                <i class="pi pi-pencil"></i> Change Episode
+              </button>
+            } @else {
+              @if (episodeError) {
+                <div class="episode-error">{{ episodeError }}</div>
+              }
+
+              @if (changingEpisode) {
+                <button class="btn-cancel-change" (click)="changingEpisode = false">
+                  <i class="pi pi-times"></i> Keep Current Episode
+                </button>
+              }
+
+              @if (episodes.length > 0 && !showEpisodeForm) {
+                <div class="episode-select-section">
+                  <p class="episode-select-label"><i class="pi pi-link"></i> Select from patient's episodes:</p>
+                  @for (ep of episodes; track ep.id) {
+                    <div class="episode-select-row">
+                      <div class="episode-select-info">
+                        <span class="ep-type-badge">{{ ep.episodeType }}</span>
+                        <span class="ep-desc-text">{{ ep.description }}</span>
+                        <span class="ep-status-badge-sm" [attr.data-status]="ep.status">{{ ep.status }}</span>
+                      </div>
+                      <button class="btn-link-ep" (click)="linkExistingEpisode(ep.id); changingEpisode = false">Link</button>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (showEpisodeForm) {
+                <form [formGroup]="episodeForm" (ngSubmit)="createEpisodeFromEncounter()">
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label>Episode Type *</label>
+                    <select formControlName="episodeType">
+                      <option value="" disabled>Select type</option>
+                      <option value="ACUTE">Acute</option>
+                      <option value="CHRONIC">Chronic</option>
+                      <option value="FOLLOW_UP">Follow Up</option>
+                      <option value="EMERGENCY">Emergency</option>
+                      <option value="PREVENTIVE">Preventive</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label>Description *</label>
+                    <input type="text" formControlName="description" placeholder="Episode description" />
+                  </div>
+                  <button type="submit" class="btn-ep-create" [disabled]="episodeSubmitting || episodeForm.invalid">
+                    @if (episodeSubmitting) {
+                      <i class="pi pi-spin pi-spinner"></i> Creating...
+                    } @else {
+                      <i class="pi pi-plus"></i> Create & Link Episode
+                    }
+                  </button>
+                </form>
+              }
+
+              @if (episodes.length === 0 && !showEpisodeForm && !changingEpisode) {
+                <div class="empty-text">No episodes yet. Create one using the button above.</div>
+              }
+            }
+          </div>
+        }
+
+        <!-- Previous Consultations Panel -->
+        <div class="detail-card">
+          <div class="card-label">
+            <i class="pi pi-history"></i> Previous Consultations
+            @if (loadingHistory) {
+              <i class="pi pi-spin pi-spinner" style="margin-left: 0.5rem; font-size: 0.75rem;"></i>
+            }
+          </div>
+          @if (!loadingHistory && patientConsultationHistory.length === 0) {
+            <div class="empty-text">No previous consultations found</div>
+          }
+          @for (c of patientConsultationHistory; track c.id) {
+            <div class="prev-consultation-item">
+              <div class="prev-consult-header">
+                <span class="prev-consult-date">{{ c.createdAt | date:'mediumDate' }}</span>
+                <span class="prev-consult-time">{{ c.createdAt | date:'shortTime' }}</span>
+              </div>
+              <div class="prev-consult-row"><strong>Doctor:</strong> {{ c.doctorName || c.createdBy }}</div>
+              @if (c.symptoms) {
+                <div class="prev-consult-row"><strong>Symptoms:</strong> {{ c.symptoms }}</div>
+              }
+              <div class="prev-consult-row"><strong>Diagnosis:</strong> {{ c.diagnosis }}</div>
+              <div class="prev-consult-row"><strong>Prescription:</strong> {{ c.prescription }}</div>
+              @if (c.doctorNotes) {
+                <div class="prev-consult-row"><strong>Notes:</strong> {{ c.doctorNotes }}</div>
+              }
+              @if (c.testsRequested) {
+                <div class="prev-consult-row"><strong>Tests:</strong> {{ c.testsRequested }}</div>
+              }
+              @if (c.followupDate) {
+                <div class="prev-consult-row"><strong>Follow-up:</strong> {{ c.followupDate }}</div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Services Panel -->
+        <div class="detail-card">
+          <div class="card-label"><i class="pi pi-box"></i> Available Services</div>
+          @for (svc of services; track svc.id) {
+            <label class="service-item" [class.selected]="selectedServices.has(svc.id)">
+              <input
+                type="checkbox"
+                [checked]="selectedServices.has(svc.id)"
+                (change)="toggleService(svc)"
+                class="service-checkbox"
+              />
+              <span class="svc-name">{{ svc.name }}</span>
+              <span class="svc-category">{{ svc.category }}</span>
+              <span class="svc-price">{{ svc.price | currency }}</span>
+            </label>
+          }
+          @if (services.length === 0) {
+            <div class="empty-text">No services available</div>
+          }
+          @if (selectedServices.size > 0) {
+            <div class="selected-total">
+              <span>{{ selectedServices.size }} service(s) selected</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- ===== RIGHT COLUMN: Consultation Form ===== -->
+      <div class="form-column">
+        <div class="form-card">
+          <h2>{{ existingConsultation ? 'Update Consultation' : 'New Consultation' }}</h2>
+          <form [formGroup]="consultationForm" (ngSubmit)="saveConsultation()">
+
+            <div class="form-group">
+              <label for="symptoms">Symptoms</label>
+              <textarea
+                id="symptoms"
+                formControlName="symptoms"
+                rows="3"
+                placeholder="Describe patient symptoms..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="diagnosis">Diagnosis *</label>
+              <textarea
+                id="diagnosis"
+                formControlName="diagnosis"
+                rows="3"
+                placeholder="Enter diagnosis..."></textarea>
+              @if (consultationForm.get('diagnosis')?.invalid && consultationForm.get('diagnosis')?.touched) {
+                <small class="error-text">Diagnosis is required</small>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="prescription">Prescription *</label>
+              <textarea
+                id="prescription"
+                formControlName="prescription"
+                rows="4"
+                placeholder="Enter prescription details..."></textarea>
+              @if (consultationForm.get('prescription')?.invalid && consultationForm.get('prescription')?.touched) {
+                <small class="error-text">Prescription is required</small>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="doctorNotes">Doctor Notes</label>
+              <textarea
+                id="doctorNotes"
+                formControlName="doctorNotes"
+                rows="3"
+                placeholder="Additional notes..."></textarea>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="followupDate">Follow-up Date</label>
+                <input id="followupDate" type="date" formControlName="followupDate" />
+              </div>
+              <div class="form-group">
+                <label for="testsRequested">Tests Requested</label>
+                <input id="testsRequested" type="text" formControlName="testsRequested"
+                       placeholder="e.g., CBC, X-Ray..." />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" (click)="backToQueue()">
+                Back
+              </button>
+              @if (userRole === 'DOCTOR' || userRole === 'ADMIN') {
+                <button type="submit" class="btn-primary" [disabled]="consultationForm.invalid || saving">
+                  @if (saving) {
+                    <i class="pi pi-spin pi-spinner"></i> Saving...
+                  } @else {
+                    <i class="pi pi-save"></i> {{ existingConsultation ? 'Update Consultation' : 'Save Consultation' }}
+                  }
+                </button>
+                @if (existingConsultation) {
+                  <button type="button" class="btn-success" (click)="completeConsultation()" [disabled]="saving">
+                    <i class="pi pi-check-circle"></i> Complete
+                  </button>
+                }
+              }
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<p-toast></p-toast>

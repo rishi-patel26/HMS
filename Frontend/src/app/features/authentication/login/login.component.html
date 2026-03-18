@@ -1,0 +1,58 @@
+<div class="auth-container">
+  <p-toast position="top-right" [life]="3000"></p-toast>
+  
+  <div class="auth-wrapper">
+    <div class="auth-left">
+      <div class="auth-left-content">
+        <div class="logo">
+          <!-- <i class="pi pi-heart-fill"></i> -->
+          <span>BMC</span>
+        </div>
+        <h1>Welcome to <span class="highlight">BMC</span></h1>
+        <h2>Hospital Management System</h2>
+        <p>Cloud Based Integrated Hospital Management system<br>More centralized, more Secured and more Reliable</p>
+      </div>
+    </div>
+
+    <div class="auth-right">
+      <div class="auth-card">
+        <div class="logo-mobile">
+          <i class="pi pi-heart-fill"></i>
+          <span>BMC</span>
+        </div>
+        <h3>Login</h3>
+        <p class="subtitle">Enter your credentials to access the system</p>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+          <div class="form-field">
+            <label for="username">Username</label>
+            <input 
+              type="text" 
+              id="username" 
+              formControlName="username" 
+              class="form-input"
+              placeholder="Username" />
+          </div>
+
+          <div class="form-field">
+            <label for="password">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              formControlName="password" 
+              class="form-input"
+              placeholder="Enter your password" />
+            <!-- <a href="#" class="forgot-link">Forgot Password?</a> -->
+          </div>
+
+          <button 
+            type="submit" 
+            [disabled]="!loginForm.valid"
+            class="submit-btn">
+            Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

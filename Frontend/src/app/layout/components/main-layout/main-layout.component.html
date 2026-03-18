@@ -1,0 +1,57 @@
+<div class="app-layout" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <i class="pi pi-heart-fill" style="font-size: 1.5rem;"></i>
+      <h2 class="brand-text">HMS</h2>
+    </div>
+
+    <!-- User Info -->
+    <div class="user-info">
+      <div class="user-avatar">
+        <i class="pi pi-user"></i>
+      </div>
+      <div class="user-details">
+        <div class="user-name">{{ username }}</div>
+        <div class="user-role">{{ roleLabel }}</div>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="sidebar-nav">
+      @for (item of filteredNavItems; track item.route) {
+        <a class="nav-item"
+           [routerLink]="item.route"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: item.route === '/frontdesk-dashboard' }">
+          <i [class]="item.icon"></i>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" (click)="logout()">
+        <i class="pi pi-sign-out"></i>
+        <span class="nav-label">Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Top Header -->
+  <div class="main-wrapper">
+    <header class="top-header">
+      <button class="toggle-btn" (click)="toggleSidebar()">
+        <i class="pi pi-bars"></i>
+      </button>
+      <div class="header-title">Hospital Management System</div>
+      <div class="header-user">
+        <i class="pi pi-user"></i>
+        <span>{{ username }}</span>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

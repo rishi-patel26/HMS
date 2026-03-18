@@ -1,0 +1,264 @@
+<div class="episode-list-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <i class="pi pi-bookmark"></i>
+      </div>
+      <div>
+        <h1>Clinical Episodes</h1>
+        <p class="header-subtitle">
+          @if (userRole === 'DOCTOR') { Your patients' clinical episodes }
+          @else { Manage patient clinical episodes }
+        </p>
+      </div>
+    </div>
+    @if (selectedPatient && (userRole === 'DOCTOR' || userRole === 'ADMIN')) {
+      <button class="btn-primary" (click)="toggleCreateForm()">
+        <i class="pi pi-plus"></i> {{ showCreateForm ? 'Cancel' : 'New Episode' }}
+      </button>
+    }
+  </div>
+
+  <!-- Patient Search -->
+  @if (!selectedPatient) {
+    <div class="search-card">
+      <div class="search-card-header">
+        <i class="pi pi-search"></i>
+        <span>Search Patient to Filter Episodes</span>
+      </div>
+      <div class="search-bar">
+        <div class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchInput()"
+            (keyup.enter)="searchPatient()"
+            placeholder="Search by name, phone, or UHID..."
+            class="search-input"
+          />
+          @if (searchQuery) {
+            <button class="btn-clear" (click)="searchQuery = ''; onSearchInput()" title="Clear">
+              <i class="pi pi-times"></i>
+            </button>
+          }
+        </div>
+        <button class="btn-search" (click)="searchPatient()">
+          <i class="pi pi-search"></i> Search
+        </button>
+      </div>
+
+      @if (searchingPatient) {
+        <div class="search-loading"><i class="pi pi-spin pi-spinner"></i> Searching...</div>
+      }
+
+      @if (searchResults.length > 0) {
+        <div class="search-results">
+          @for (p of searchResults; track p.id) {
+            <div class="search-result-item" (click)="selectPatient(p)">
+              <div class="result-info">
+                <div class="result-avatar">{{ p.firstName.charAt(0) }}</div>
+                <span class="result-name">{{ p.firstName }} {{ p.lastName }}</span>
+                <span class="result-uhid">{{ p.uhid }}</span>
+              </div>
+              <span class="result-phone"><i class="pi pi-phone"></i> {{ p.phone }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Selected Patient -->
+  @if (selectedPatient) {
+    <div class="selected-patient">
+      <div class="patient-info">
+        <div class="patient-avatar-sm">{{ selectedPatient.firstName.charAt(0) }}</div>
+        <div class="patient-details">
+          <span class="patient-name">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</span>
+          <span class="patient-uhid">{{ selectedPatient.uhid }}</span>
+        </div>
+      </div>
+      <button class="btn-icon-sm" (click)="clearPatient()" title="Clear selection">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+  }
+
+  <!-- Create Episode Form -->
+  @if (showCreateForm && selectedPatient) {
+    <div class="form-card">
+      <h3>New Clinical Episode</h3>
+      @if (errorMessage) {
+        <div class="error-banner">{{ errorMessage }}</div>
+      }
+      <form [formGroup]="episodeForm" (ngSubmit)="createEpisode()">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Episode Type *</label>
+            <select formControlName="episodeType" [class.is-invalid]="isInvalid('episodeType')">
+              <option value="" disabled>Select type</option>
+              <option value="ACUTE">Acute</option>
+              <option value="CHRONIC">Chronic</option>
+              <option value="FOLLOW_UP">Follow Up</option>
+              <option value="EMERGENCY">Emergency</option>
+              <option value="PREVENTIVE">Preventive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description *</label>
+            <input type="text" formControlName="description" placeholder="Brief description" [class.is-invalid]="isInvalid('description')" />
+          </div>
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" formControlName="startDate" />
+          </div>
+          <div class="form-group">
+            <label>Start Time</label>
+            <input type="time" formControlName="startTime" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="toggleCreateForm()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="episodeForm.invalid || submitting">
+            @if (submitting) { <i class="pi pi-spin pi-spinner"></i> Creating... }
+            @else { <i class="pi pi-plus"></i> Create Episode }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Edit Episode Form -->
+  @if (showEditForm && editingEpisode) {
+    <div class="form-card edit-form-overlay">
+      <h3>Edit Episode</h3>
+      <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Episode Type *</label>
+            <select formControlName="episodeType">
+              <option value="ACUTE">Acute</option>
+              <option value="CHRONIC">Chronic</option>
+              <option value="FOLLOW_UP">Follow Up</option>
+              <option value="EMERGENCY">Emergency</option>
+              <option value="PREVENTIVE">Preventive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description *</label>
+            <input type="text" formControlName="description" placeholder="Brief description" />
+          </div>
+          <div class="form-group">
+            <label>Severity</label>
+            <select formControlName="severity">
+              <option value="">Select severity</option>
+              <option value="MILD">Mild</option>
+              <option value="MODERATE">Moderate</option>
+              <option value="SEVERE">Severe</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Diagnosis Summary</label>
+            <input type="text" formControlName="diagnosisSummary" placeholder="Diagnosis summary" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea formControlName="notes" rows="2" placeholder="Additional notes"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="cancelEdit()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="editForm.invalid">
+            <i class="pi pi-save"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading episodes...</p>
+    </div>
+  }
+
+  <!-- Episodes List -->
+  @if (!loading && episodes.length > 0) {
+    <div class="results-header">
+      <span class="results-count">{{ episodes.length }} episode{{ episodes.length > 1 ? 's' : '' }}</span>
+    </div>
+    <div class="episode-cards">
+      @for (ep of episodes; track ep.id) {
+        <div class="episode-card" [attr.data-status]="ep.status">
+          <div class="ep-card-header">
+            <div class="ep-type-badge">{{ ep.episodeType }}</div>
+            <span class="ep-status-badge" [attr.data-status]="ep.status">{{ ep.status }}</span>
+          </div>
+          <div class="ep-card-body">
+            <div class="ep-patient">
+              <i class="pi pi-user"></i>
+              <strong>{{ ep.patientName || 'Patient #' + ep.patientId }}</strong>
+              @if (ep.patientUhid) { <span class="uhid-badge">{{ ep.patientUhid }}</span> }
+            </div>
+            <div class="ep-description">{{ ep.description }}</div>
+            @if (ep.diagnosisSummary) {
+              <div class="ep-detail"><strong>Diagnosis:</strong> {{ ep.diagnosisSummary }}</div>
+            }
+            @if (ep.severity) {
+              <div class="ep-detail"><strong>Severity:</strong> <span class="severity-badge" [attr.data-severity]="ep.severity">{{ ep.severity }}</span></div>
+            }
+            <div class="ep-dates">
+              <span><i class="pi pi-calendar"></i> Started: {{ ep.startDate }}</span>
+              @if (ep.endDate) { <span><i class="pi pi-calendar-times"></i> Ended: {{ ep.endDate }}</span> }
+            </div>
+          </div>
+          <div class="ep-card-footer">
+            @if (userRole === 'DOCTOR' || userRole === 'ADMIN') {
+              <button class="btn-sm btn-edit" (click)="openEditForm(ep)" title="Edit">
+                <i class="pi pi-pencil"></i> Edit
+              </button>
+              @if (ep.status !== 'CLOSED') {
+                <button class="btn-sm btn-close-ep" (click)="closeEpisode(ep)" title="Close Episode">
+                  <i class="pi pi-times-circle"></i> Close
+                </button>
+              }
+            }
+            @if (userRole === 'ADMIN') {
+              <button class="btn-sm btn-delete" (click)="deleteEpisode(ep)" title="Delete">
+                <i class="pi pi-trash"></i>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (!loading && episodes.length === 0 && !selectedPatient && userRole !== 'DOCTOR') {
+    <div class="empty-state">
+      <div class="empty-icon"><i class="pi pi-bookmark"></i></div>
+      <h3>Search for a patient</h3>
+      <p>Search for a patient above to view their clinical episodes</p>
+    </div>
+  }
+
+  @if (!loading && episodes.length === 0 && (selectedPatient || userRole === 'DOCTOR')) {
+    <div class="empty-state">
+      <div class="empty-icon"><i class="pi pi-bookmark"></i></div>
+      <h3>No episodes found</h3>
+      @if (userRole === 'DOCTOR' || userRole === 'ADMIN') {
+        <p>No clinical episodes yet.
+          @if (selectedPatient) { Start by creating a new episode above. }
+        </p>
+      } @else {
+        <p>No clinical episodes found for this patient</p>
+      }
+    </div>
+  }
+</div>
+
+<p-toast></p-toast>

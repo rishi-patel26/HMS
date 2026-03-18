@@ -1,0 +1,113 @@
+<div class="bill-list-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon"><i class="pi pi-money-bill"></i></div>
+      <div>
+        <h1>Billing</h1>
+        <p class="header-subtitle">Manage patient bills</p>
+      </div>
+    </div>
+    @if (canCreateBill) {
+      <button class="btn-primary" (click)="createNewBill()">
+        <i class="pi pi-plus"></i> Create Bill
+      </button>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Date</label>
+        <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange(selectedDate)" />
+      </div>
+      <div class="filter-group">
+        <label>Bill Number</label>
+        <input type="text" [(ngModel)]="searchBillNumber" placeholder="Search bill number..." />
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select [(ngModel)]="filterStatus">
+          <option value="">All</option>
+          <option value="PENDING">Pending</option>
+          <option value="PARTIAL">Partial</option>
+          <option value="PAID">Paid</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-primary btn-sm" (click)="searchBills()"><i class="pi pi-search"></i> Search</button>
+        <button class="btn-secondary btn-sm" (click)="selectedDate = ''; searchBillNumber = ''; filterStatus = ''; loadTodayBills()">Today</button>
+        <button class="btn-secondary btn-sm" (click)="loadAllBills()">All Bills</button>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading bills...</p>
+    </div>
+  }
+
+  @if (!loading && bills.length > 0) {
+    <div class="results-header">
+      <span class="results-count">{{ bills.length }} bill(s)
+        @if (viewMode === 'today') { today }
+        @if (viewMode === 'all') { total }
+      </span>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Bill #</th>
+            <th>Patient</th>
+            <th>UHID</th>
+            <th>Total</th>
+            <th>Paid</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (bill of bills; track bill.id) {
+            <tr>
+              <td><span class="id-badge">{{ bill.billNumber }}</span></td>
+              <td>{{ bill.patientName || '-' }}</td>
+              <td><span class="uhid-badge">{{ bill.patientUhid || '-' }}</span></td>
+              <td>{{ bill.totalAmount | currency:'INR':'symbol':'1.0-0' }}</td>
+              <td>{{ bill.paidAmount | currency:'INR':'symbol':'1.0-0' }}</td>
+              <td>
+                <span class="status-badge" [class]="getStatusClass(bill.paymentStatus)">{{ bill.paymentStatus }}</span>
+              </td>
+              <td>{{ bill.createdAt | date:'short' }}</td>
+              <td>
+                <div style="display: flex; gap: 0.4rem;">
+                  <button class="btn-sm btn-primary" (click)="viewBillDetails(bill.id)">
+                    <i class="pi pi-eye"></i> View
+                  </button>
+                  @if (userRole === 'ADMIN') {
+                    <button class="btn-sm btn-delete" (click)="deleteBill(bill)">
+                      <i class="pi pi-trash"></i> Delete
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (!loading && bills.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon"><i class="pi pi-money-bill"></i></div>
+      <h3>No bills found</h3>
+      <p>No bills match your search criteria</p>
+    </div>
+  }
+</div>
+
+<p-toast></p-toast>
