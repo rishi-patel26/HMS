@@ -16,6 +16,10 @@
 12. [Frontend Services](#12-frontend-services)
 13. [Data Models](#13-data-models)
 14. [Configuration](#14-configuration)
+15. [Project Report at a Glance](#15-project-report-at-a-glance)
+16. [API Quick Map](#16-api-quick-map)
+17. [Getting Started (Backend + Frontend)](#17-getting-started-backend--frontend)
+18. [How to Understand This Project Quickly](#18-how-to-understand-this-project-quickly)
 
 ---
 
@@ -1353,6 +1357,178 @@ The backend allows requests only from `http://localhost:4200` (`GET`, `POST`, `P
 - Beds: `ICU-1..ICU-10`, `GENERAL-1..GENERAL-30`, `PRIVATE-1..PRIVATE-10` (all `AVAILABLE`)
 
 Change this immediately in production.
+
+---
+
+## 15. Project Report at a Glance
+
+This section is a concise report designed for quick onboarding. It complements the detailed sections above.
+
+### 15.1 System Context Diagram
+
+```mermaid
+flowchart LR
+    U[Hospital Staff<br/>Admin / Frontdesk / Doctor / Nurse / Bed Manager]
+    FE[Angular Frontend<br/>Routes + Guards + Services]
+    BE[Spring Boot Backend<br/>Controllers + Services + Security]
+    DB[(MySQL medicaldb)]
+    R[(Redis<br/>Token Blacklist)]
+
+    U --> FE
+    FE -->|REST + JWT Bearer| BE
+    BE --> DB
+    BE --> R
+```
+
+### 15.2 Backend Layered Architecture
+
+```mermaid
+flowchart TD
+    C[REST Controllers] --> S[Service Layer]
+    S --> M[Mapper/DTO Layer]
+    S --> RP[Repository Layer]
+    RP --> E[(JPA Entities)]
+    E --> DB[(MySQL)]
+    C -. secured by .-> SEC[Spring Security + JWT + RBAC]
+```
+
+### 15.3 End-to-End Patient Journey
+
+```mermaid
+sequenceDiagram
+    actor FD as Frontdesk
+    participant FE as Angular SPA
+    participant API as Spring Boot API
+    participant SQL as MySQL
+
+    FD->>FE: Register patient
+    FE->>API: POST /api/patients
+    API->>SQL: Create Patient + UHID
+    SQL-->>API: Patient persisted
+    API-->>FE: PatientResponse
+
+    FD->>FE: Schedule appointment
+    FE->>API: POST /api/appointments
+    API->>SQL: Save appointment
+    API-->>FE: AppointmentResponse
+
+    FD->>FE: Check-in patient
+    FE->>API: POST /api/encounters
+    API->>SQL: Save encounter
+    API-->>FE: EncounterResponse
+
+    participant DR as Doctor
+    DR->>FE: Open consultation workspace
+    FE->>API: POST /api/consultations
+    API->>SQL: Save diagnosis/treatment
+    API-->>FE: ConsultationResponse
+
+    FD->>FE: Generate bill
+    FE->>API: POST /api/billing
+    API->>SQL: Save bill + items
+    API-->>FE: BillResponse
+```
+
+### 15.4 Core Domain ER Diagram (High-Level)
+
+```mermaid
+erDiagram
+    USER ||--o{ APPOINTMENT : creates
+    USER ||--o{ EPISODE : manages
+    PATIENT ||--o{ APPOINTMENT : has
+    PATIENT ||--o{ ENCOUNTER : has
+    ENCOUNTER ||--o{ CONSULTATION : includes
+    PATIENT ||--o{ BILL : billed_for
+    BILL ||--|{ BILL_ITEM : contains
+    SERVICE_CATALOG ||--o{ BILL_ITEM : priced_from
+    WARD ||--|{ BED : contains
+    PATIENT ||--o{ BED_ASSIGNMENT : assigned
+```
+
+---
+
+## 16. API Quick Map
+
+| Area | Method | Endpoint | Typical Roles |
+|------|--------|----------|----------------|
+| Auth | POST | `/api/auth/login` | Public |
+| Auth | POST | `/api/auth/refresh` | Authenticated |
+| Auth | POST | `/api/auth/logout` | Authenticated |
+| Users | GET | `/api/users` | `ADMIN` |
+| Users | POST | `/api/users` | `ADMIN` |
+| Patients | GET | `/api/patients` | `ADMIN`, `FRONTDESK`, `DOCTOR`, `NURSE` |
+| Patients | POST | `/api/patients` | `ADMIN`, `FRONTDESK` |
+| Appointments | GET | `/api/appointments` | Clinical + Frontdesk roles |
+| Appointments | POST | `/api/appointments` | `ADMIN`, `FRONTDESK` |
+| Encounters | GET | `/api/encounters` | Clinical + Frontdesk roles |
+| Encounters | POST | `/api/encounters` | `ADMIN`, `FRONTDESK` |
+| Consultations | GET | `/api/consultations` | `ADMIN`, `DOCTOR`, `NURSE` |
+| Consultations | POST | `/api/consultations` | `ADMIN`, `DOCTOR` |
+| Episodes | GET | `/api/episodes` | `ADMIN`, `DOCTOR`, `NURSE` |
+| Episodes | POST | `/api/episodes` | `ADMIN`, `DOCTOR` |
+| Billing | GET | `/api/billing` | `ADMIN`, `FRONTDESK` |
+| Billing | POST | `/api/billing` | `ADMIN`, `FRONTDESK` |
+| Services | GET | `/api/services` | Authenticated roles |
+| Bed Mgmt | GET | `/api/bed-management/calendar` | `ADMIN`, `BED_MANAGER` |
+| Bed Mgmt | POST | `/api/bed-management/requests` | `ADMIN`, `NURSE` |
+
+> For complete payload contracts and status enums, refer to Section 7 (API Reference).
+
+---
+
+## 17. Getting Started (Backend + Frontend)
+
+### Prerequisites
+
+- Java 21
+- Node.js + npm
+- MySQL 8
+- Redis (for token blacklist)
+
+### Run Backend
+
+```bash
+cd HMS-backend
+./mvnw spring-boot:run
+```
+
+Backend base URL: `http://localhost:8080`
+
+### Run Frontend
+
+```bash
+cd Frontend
+npm install
+npm start
+```
+
+Frontend URL: `http://localhost:4200`
+
+### Verify Build/Test
+
+```bash
+# Backend
+cd HMS-backend
+./mvnw test
+
+# Frontend
+cd Frontend
+npm test
+```
+
+---
+
+## 18. How to Understand This Project Quickly
+
+1. Read **Section 1** to understand roles and product scope.
+2. Read **Section 3** + **Section 15 diagrams** for architecture and data flow.
+3. Read **Section 4** to map folder layout to business modules.
+4. Read **Section 8** to understand role-based access.
+5. Use **Section 16 API Quick Map** to locate the correct backend endpoint family quickly.
+6. Run the app via **Section 17** and test one real flow:
+   - Login → Patient create → Appointment create → Encounter check-in → Consultation → Billing.
+
+This path gives new contributors a practical mental model of the full HMS lifecycle in under 15 minutes.
 
 ---
 
