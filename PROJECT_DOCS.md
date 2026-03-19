@@ -1488,7 +1488,7 @@ erDiagram
 ### Run Backend
 
 ```bash
-cd /home/runner/work/HMS/HMS/HMS-backend
+cd HMS-backend
 ./mvnw spring-boot:run
 ```
 
@@ -1497,7 +1497,7 @@ Backend base URL: `http://localhost:8080`
 ### Run Frontend
 
 ```bash
-cd /home/runner/work/HMS/HMS/Frontend
+cd Frontend
 npm install
 npm start
 ```
@@ -1508,11 +1508,11 @@ Frontend URL: `http://localhost:4200`
 
 ```bash
 # Backend
-cd /home/runner/work/HMS/HMS/HMS-backend
+cd HMS-backend
 ./mvnw test
 
 # Frontend
-cd /home/runner/work/HMS/HMS/Frontend
+cd Frontend
 npm test
 ```
 
