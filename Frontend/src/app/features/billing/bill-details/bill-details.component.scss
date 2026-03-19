@@ -4,7 +4,11 @@
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.75rem;
-    h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0; flex: 1; }
+    .invoice-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
   }
 
   .error-banner {
@@ -32,60 +36,6 @@
     p { color: #64748b; margin: 1rem 0; }
   }
 
-  // Bill Summary Card
-  .bill-summary {
-    background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.06), 0 4px 16px rgba(79, 70, 229, 0.04);
-    border: 1px solid #e8e5f8;
-    margin-bottom: 1.5rem;
-
-    .summary-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.25rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid #f1f0fb;
-      .bill-number { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-right: 0.75rem; }
-      .encounter-ref { color: #64748b; font-size: 0.9rem; }
-    }
-
-    .summary-amounts {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1rem;
-
-      .amount-item {
-        text-align: center;
-        padding: 1rem;
-        border-radius: 12px;
-        background: #fafaff;
-        border: 1px solid #f1f0fb;
-
-        .amount-label {
-          display: block;
-          font-size: 0.72rem;
-          font-weight: 600;
-          color: #6366f1;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: 0.35rem;
-        }
-        .amount-value {
-          display: block;
-          font-size: 1.25rem;
-          font-weight: 700;
-          &.total { color: #1e293b; }
-          &.paid { color: #059669; }
-          &.due { color: #dc2626; }
-          &.due.zero { color: #059669; }
-        }
-      }
-    }
-  }
-
   // Section Cards
   .section-card {
     background: white;
@@ -111,63 +61,6 @@
         border-radius: 2px;
       }
     }
-  }
-
-  // Table
-  .table-container { overflow-x: auto; }
-
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-
-    th {
-      background: #fafaff;
-      padding: 0.8rem 1rem;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.78rem;
-      color: #6366f1;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border-bottom: 2px solid #e8e5f8;
-    }
-    td {
-      padding: 0.8rem 1rem;
-      font-size: 0.9rem;
-      color: #334155;
-      border-bottom: 1px solid #f1f0fb;
-    }
-    .subtotal { font-weight: 600; color: #1e293b; }
-
-    tbody tr {
-      transition: background 0.15s;
-      &:hover { background: #fafaff; }
-    }
-
-    tfoot {
-      .total-label {
-        text-align: right;
-        font-weight: 700;
-        font-size: 0.9rem;
-        color: #1e293b;
-        padding: 0.85rem 1rem;
-        background: #fafaff;
-      }
-      .total-value {
-        font-weight: 700;
-        font-size: 1rem;
-        color: #4f46e5;
-        padding: 0.85rem 1rem;
-        background: #fafaff;
-      }
-    }
-  }
-
-  .empty-items {
-    text-align: center;
-    padding: 1.5rem;
-    color: #94a3b8;
-    font-size: 0.9rem;
   }
 
   // Add item form
@@ -214,22 +107,153 @@
   }
 
   .btn-add { white-space: nowrap; }
-
-  // Payment section
   .payment-section { border-left: 4px solid #4f46e5; }
+}
 
-  .status-badge {
+// ── Printable Invoice ────────────────────────────────────────────────────────
+.invoice-printable {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.06);
+  border: 1px solid #e8e5f8;
+  margin-bottom: 1.5rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+
+  .invoice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+
+    .hospital-info {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      .hospital-logo { flex-shrink: 0; }
+      .hospital-name { font-size: 1.4rem; font-weight: 800; color: #4f46e5; margin: 0 0 0.25rem; }
+      .hospital-address, .hospital-contact {
+        margin: 0;
+        font-size: 0.78rem;
+        color: #64748b;
+        line-height: 1.5;
+      }
+    }
+
+    .invoice-meta {
+      text-align: right;
+      .invoice-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #1e293b;
+        letter-spacing: 0.1em;
+        margin: 0 0 0.75rem;
+      }
+      .meta-table {
+        border: none;
+        td { padding: 0.2rem 0.5rem; font-size: 0.82rem; color: #475569; }
+        td:first-child { text-align: right; font-weight: 600; color: #64748b; }
+        td:last-child { text-align: left; }
+      }
+    }
+  }
+
+  .divider {
+    border: none;
+    border-top: 2px solid #e8e5f8;
+    margin: 1rem 0 1.5rem;
+  }
+
+  .patient-section {
+    background: #f8f9ff;
+    border-left: 4px solid #4f46e5;
+    padding: 1rem 1.25rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.5rem;
+    h3 { margin: 0 0 0.4rem; font-size: 0.75rem; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.08em; }
+    .patient-name { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0 0 0.2rem; }
+    .patient-uhid { font-size: 0.82rem; color: #64748b; margin: 0; }
+  }
+
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+
+    thead tr {
+      background: #4f46e5;
+      th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+    }
+    tbody tr {
+      &:nth-child(even) { background: #fafaff; }
+      td {
+        padding: 0.7rem 1rem;
+        font-size: 0.88rem;
+        color: #334155;
+        border-bottom: 1px solid #f1f0fb;
+      }
+    }
+    tfoot {
+      .subtotal-row td, .paid-row td, .balance-row td {
+        padding: 0.6rem 1rem;
+        font-size: 0.88rem;
+      }
+      .subtotal-row { border-top: 2px solid #e8e5f8; }
+      .balance-row {
+        background: #f0f0ff;
+        td { font-size: 1rem; color: #4f46e5; }
+      }
+      .total-label { text-align: right; color: #475569; }
+    }
+    .col-no { width: 5%; }
+    .col-service { width: 45%; }
+    .col-price { width: 15%; text-align: right; }
+    .col-qty { width: 10%; text-align: center; }
+    .col-subtotal { width: 25%; text-align: right; }
+    .empty-row { text-align: center; color: #94a3b8; padding: 1.5rem; }
+  }
+
+  .status-pill {
     display: inline-block;
     padding: 0.2rem 0.65rem;
     border-radius: 6px;
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     &[data-status="PENDING"] { background: #fef9ee; color: #d97706; }
     &[data-status="PARTIAL"] { background: #eff6ff; color: #2563eb; }
-    &[data-status="PAID"] { background: #ecfdf5; color: #059669; }
+    &[data-status="PAID"]    { background: #ecfdf5; color: #059669; }
+  }
+
+  .payment-info-row {
+    text-align: right;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    color: #64748b;
+    .payment-method-label { font-weight: 600; margin-right: 0.4rem; }
+    .payment-method-value { color: #1e293b; }
+  }
+
+  .invoice-footer {
+    margin-top: 2rem;
+    text-align: center;
+    padding-top: 1.25rem;
+    border-top: 1px solid #e8e5f8;
+    p { margin: 0 0 0.25rem; font-size: 0.85rem; color: #475569; }
+    .disclaimer { font-size: 0.75rem; color: #94a3b8; font-style: italic; }
   }
 }
 
+// ── Buttons ──────────────────────────────────────────────────────────────────
 .btn-back {
   width: 42px;
   height: 42px;
@@ -268,6 +292,40 @@
   &:disabled { opacity: 0.7; cursor: not-allowed; box-shadow: none; }
 }
 
+.btn-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: white;
+  color: #4f46e5;
+  border: 2px solid #4f46e5;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { background: #f0f0ff; }
+}
+
+.btn-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+  &:hover:not(:disabled) { background: linear-gradient(135deg, #b91c1c, #dc2626); transform: translateY(-1px); }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+}
+
 .btn-pay {
   display: inline-flex;
   align-items: center;
@@ -291,9 +349,19 @@
   &:disabled { opacity: 0.7; cursor: not-allowed; box-shadow: none; }
 }
 
-@media (max-width: 768px) {
-  .bill-details-page {
-    .bill-summary .summary-amounts { grid-template-columns: 1fr; }
-    .form-row { flex-direction: column; }
+// ── Print Media ──────────────────────────────────────────────────────────────
+@media print {
+  .no-print { display: none !important; }
+  .invoice-printable {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin: 0;
   }
+  body { background: white; }
+}
+
+@media (max-width: 768px) {
+  .bill-details-page .form-row { flex-direction: column; }
+  .invoice-printable .invoice-header { flex-direction: column; gap: 1rem; .invoice-meta { text-align: left; } }
 }

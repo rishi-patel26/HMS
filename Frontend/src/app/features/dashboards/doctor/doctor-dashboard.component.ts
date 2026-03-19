@@ -5,11 +5,12 @@ import { AuthService } from '@core/services/auth.service';
 import { DashboardService } from '@core/services/dashboard.service';
 import { DashboardStats } from '@core/models/hms.model';
 import { Chart, DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
+import { NotificationPanelComponent } from '../../../shared/components/notification-panel.component';
 
 @Component({
   selector: 'app-doctor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, NotificationPanelComponent],
   template: `
     <div class="dashboard-page">
       <div class="page-header">
@@ -17,6 +18,7 @@ import { Chart, DoughnutController, BarController, ArcElement, BarElement, Categ
           <h1>Doctor Dashboard</h1>
           <p class="welcome-text">Welcome back, Dr. {{ username }}!</p>
         </div>
+        <app-notification-panel></app-notification-panel>
       </div>
 
       <div class="loading-state" *ngIf="loading">
@@ -145,6 +147,9 @@ import { Chart, DoughnutController, BarController, ArcElement, BarElement, Categ
     .dashboard-page { }
     .page-header {
       margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 0.25rem 0; }
       .welcome-text { color: #64748b; margin: 0; font-size: 0.95rem; }
     }

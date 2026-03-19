@@ -441,3 +441,16 @@ export interface RevenueTrendResponse {
   labels: string[];
   revenueData: number[];
 }
+
+// Notification models
+export type NotificationType = 'APPOINTMENT' | 'BED_ALLOCATION' | 'GENERAL';
+
+export interface Notification {
+  id: number;
+  message: string;
+  type: NotificationType;
+  targetUser: string | null;
+  targetRole: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
