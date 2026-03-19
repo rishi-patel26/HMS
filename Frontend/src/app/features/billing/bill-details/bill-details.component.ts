@@ -6,6 +6,8 @@ import { BillingService } from '../../../core/services/billing.service';
 import { ServiceCatalogService } from '../../../core/services/service-catalog.service';
 import { DataRefreshService } from '../../../core/services/data-refresh.service';
 import { Bill, ServiceCatalogItem } from '../../../core/models/hms.model';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 @Component({
   selector: 'app-bill-details',
@@ -18,6 +20,7 @@ export class BillDetailsComponent implements OnInit {
   bill: Bill | null = null;
   services: ServiceCatalogItem[] = [];
   loading = true;
+  generatingPdf = false;
 
   selectedServiceId: number | null = null;
   itemQuantity = 1;
@@ -132,6 +135,41 @@ export class BillDetailsComponent implements OnInit {
   get balanceDue(): number {
     if (!this.bill) return 0;
     return this.bill.totalAmount - this.bill.paidAmount;
+  }
+
+  printInvoice(): void {
+    window.print();
+  }
+
+  async downloadPdf(): Promise<void> {
+    if (!this.bill) return;
+    this.generatingPdf = true;
+    this.cdr.detectChanges();
+
+    try {
+      const element = document.getElementById('invoice-printable');
+      if (!element) return;
+
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Invoice-${this.bill.billNumber}.pdf`);
+    } finally {
+      this.generatingPdf = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+  }
+
+  formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   goBack(): void {

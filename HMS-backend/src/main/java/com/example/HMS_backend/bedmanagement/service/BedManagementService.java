@@ -9,6 +9,8 @@ import com.example.HMS_backend.encounter.entity.Encounter;
 import com.example.HMS_backend.encounter.repository.EncounterRepository;
 import com.example.HMS_backend.entity.User;
 import com.example.HMS_backend.exception.ResourceNotFoundException;
+import com.example.HMS_backend.notification.enums.NotificationType;
+import com.example.HMS_backend.notification.service.NotificationService;
 import com.example.HMS_backend.patient.entity.Patient;
 import com.example.HMS_backend.patient.repository.PatientRepository;
 import com.example.HMS_backend.repository.UserRepository;
@@ -41,6 +43,7 @@ public class BedManagementService {
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
     private final BedManagementMapper bedManagementMapper;
+    private final NotificationService notificationService;
 
     @Transactional
     public WardResponse createWard(WardCreateRequest request) {
@@ -262,6 +265,17 @@ public class BedManagementService {
         bedAllocationRequestRepository.save(allocationRequest);
 
         createEvent(allocationRequest.getEncounterId(), BedEventType.BED_ALLOCATED, currentUser.getId(), request.getNotes());
+
+        // Notify FRONTDESK role about the bed allocation
+        Patient patient = patientRepository.findById(allocationRequest.getPatientId()).orElse(null);
+        String patientName = patient != null
+                ? patient.getFirstName() + " " + patient.getLastName()
+                : "Patient #" + allocationRequest.getPatientId();
+        notificationService.notifyRole(
+                "Bed " + bed.getBedNumber() + " allocated to patient " + patientName + " in ward " + ward.getName(),
+                NotificationType.BED_ALLOCATION,
+                "FRONTDESK"
+        );
 
         return toAssignmentResponse(savedAssignment);
     }

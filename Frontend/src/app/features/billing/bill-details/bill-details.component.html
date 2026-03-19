@@ -1,157 +1,208 @@
 <div class="bill-details-page">
-  <div class="page-header">
+  <div class="page-header no-print">
     <button class="btn-back" (click)="goBack()"><i class="pi pi-arrow-left"></i></button>
     <h1>Bill Details</h1>
+    @if (!loading && bill) {
+      <div class="invoice-actions">
+        <button class="btn-print" (click)="printInvoice()">
+          <i class="pi pi-print"></i> Print Invoice
+        </button>
+        <button class="btn-pdf" (click)="downloadPdf()" [disabled]="generatingPdf">
+          @if (generatingPdf) {
+            <i class="pi pi-spin pi-spinner"></i> Generating...
+          } @else {
+            <i class="pi pi-file-pdf"></i> Download PDF
+          }
+        </button>
+      </div>
+    }
   </div>
 
   @if (loading) {
-    <div class="loading-state">
+    <div class="loading-state no-print">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem;"></i>
       <p>Loading bill...</p>
     </div>
   }
 
   @if (errorMessage) {
-    <div class="error-banner">
+    <div class="error-banner no-print">
       <i class="pi pi-exclamation-triangle"></i> {{ errorMessage }}
     </div>
   }
 
   @if (!loading && bill) {
-    <!-- Bill Summary -->
-    <div class="bill-summary">
-      <div class="summary-header">
-        <div>
-          <span class="bill-number">{{ bill.billNumber }}</span>
-          <span class="status-badge" [attr.data-status]="bill.paymentStatus">{{ bill.paymentStatus }}</span>
-        </div>
-        <span class="encounter-ref">Encounter #{{ bill.encounterId }}</span>
-      </div>
-      <div class="summary-amounts">
-        <div class="amount-item">
-          <span class="amount-label">Total</span>
-          <span class="amount-value total">{{ bill.totalAmount | currency:'INR' }}</span>
-        </div>
-        <div class="amount-item">
-          <span class="amount-label">Paid</span>
-          <span class="amount-value paid">{{ bill.paidAmount | currency:'INR' }}</span>
-        </div>
-        <div class="amount-item">
-          <span class="amount-label">Balance Due</span>
-          <span class="amount-value due" [class.zero]="balanceDue === 0">{{ balanceDue | currency:'INR' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bill Items Table -->
-    <div class="section-card">
-      <h3>Bill Items</h3>
-      @if (bill.items && bill.items.length > 0) {
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Service</th>
-                <th>Price</th>
-                <th>Qty</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of bill.items; track item.id; let i = $index) {
-                <tr>
-                  <td>{{ i + 1 }}</td>
-                  <td>{{ item.serviceName || 'Service #' + item.serviceId }}</td>
-                  <td>{{ item.price | currency:'INR' }}</td>
-                  <td>{{ item.quantity }}</td>
-                  <td class="subtotal">{{ item.subtotal | currency:'INR' }}</td>
-                </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" class="total-label">Total</td>
-                <td class="total-value">{{ bill.totalAmount | currency:'INR' }}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      } @else {
-        <div class="empty-items">No items added yet</div>
-      }
-    </div>
-
-    <!-- Add Service Item -->
-    @if (bill.paymentStatus !== 'PAID') {
-      <div class="section-card">
-        <h3>Add Service</h3>
-        <div class="add-item-form">
-          <div class="form-row">
-            <div class="form-group flex-2">
-              <label>Service</label>
-              <select [(ngModel)]="selectedServiceId">
-                <option [ngValue]="null" disabled>Select a service...</option>
-                @for (svc of services; track svc.id) {
-                  <option [ngValue]="svc.id">{{ svc.name }} - {{ svc.price | currency:'INR' }}</option>
-                }
-              </select>
-            </div>
-            <div class="form-group flex-1">
-              <label>Quantity</label>
-              <input type="number" [(ngModel)]="itemQuantity" min="1" />
-            </div>
-            <div class="form-group flex-1">
-              <label>Subtotal</label>
-              <div class="computed-value">{{ getItemSubtotal() | currency:'INR' }}</div>
-            </div>
-            <div class="form-group btn-group">
-              <label>&nbsp;</label>
-              <button class="btn-primary btn-add" (click)="addItem()" [disabled]="addingItem || !selectedServiceId">
-                @if (addingItem) {
-                  <i class="pi pi-spin pi-spinner"></i>
-                } @else {
-                  <i class="pi pi-plus"></i> Add
-                }
-              </button>
-            </div>
+    <!-- Printable Invoice -->
+    <div id="invoice-printable" class="invoice-printable">
+      <!-- Hospital Header -->
+      <div class="invoice-header">
+        <div class="hospital-info">
+          <div class="hospital-logo">
+            <i class="pi pi-heart-fill" style="font-size:2.5rem; color:#4f46e5;"></i>
+          </div>
+          <div>
+            <h1 class="hospital-name">MediCare Hospital</h1>
+            <p class="hospital-address">123 Health Avenue, Medical District, City - 400001</p>
+            <p class="hospital-contact">Phone: +91 98765 43210 | Email: care&#64;medicare.hospital</p>
           </div>
         </div>
+        <div class="invoice-meta">
+          <h2 class="invoice-title">INVOICE</h2>
+          <table class="meta-table">
+            <tr><td>Invoice No:</td><td><strong>{{ bill.billNumber }}</strong></td></tr>
+            <tr><td>Date:</td><td>{{ formatDate(bill.createdAt) }}</td></tr>
+            <tr><td>Encounter:</td><td>#{{ bill.encounterId }}</td></tr>
+            <tr>
+              <td>Status:</td>
+              <td>
+                <span class="status-pill" [attr.data-status]="bill.paymentStatus">
+                  {{ bill.paymentStatus }}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
 
-      <!-- Payment Section -->
-      @if (bill.totalAmount > 0 && balanceDue > 0) {
-        <div class="section-card payment-section">
-          <h3>Process Payment</h3>
-          <div class="payment-form">
+      <hr class="divider" />
+
+      <!-- Patient Info -->
+      <div class="patient-section">
+        <h3>Bill To</h3>
+        <p class="patient-name">{{ bill.patientName }}</p>
+        <p class="patient-uhid">UHID: {{ bill.patientUhid }}</p>
+      </div>
+
+      <!-- Services Table -->
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th class="col-no">#</th>
+            <th class="col-service">Service Description</th>
+            <th class="col-price">Unit Price</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-subtotal">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (bill.items && bill.items.length > 0) {
+            @for (item of bill.items; track item.id; let i = $index) {
+              <tr>
+                <td class="col-no">{{ i + 1 }}</td>
+                <td class="col-service">{{ item.serviceName || 'Service #' + item.serviceId }}</td>
+                <td class="col-price">{{ formatCurrency(item.price) }}</td>
+                <td class="col-qty">{{ item.quantity }}</td>
+                <td class="col-subtotal">{{ formatCurrency(item.subtotal) }}</td>
+              </tr>
+            }
+          } @else {
+            <tr><td colspan="5" class="empty-row">No items recorded</td></tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="subtotal-row">
+            <td colspan="4" class="total-label">Subtotal</td>
+            <td>{{ formatCurrency(bill.totalAmount) }}</td>
+          </tr>
+          <tr class="paid-row">
+            <td colspan="4" class="total-label">Amount Paid</td>
+            <td>{{ formatCurrency(bill.paidAmount) }}</td>
+          </tr>
+          <tr class="balance-row">
+            <td colspan="4" class="total-label"><strong>Balance Due</strong></td>
+            <td><strong>{{ formatCurrency(balanceDue) }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Payment Info -->
+      @if (bill.paymentMethod) {
+        <div class="payment-info-row">
+          <span class="payment-method-label">Payment Method:</span>
+          <span class="payment-method-value">{{ bill.paymentMethod }}</span>
+        </div>
+      }
+
+      <!-- Footer -->
+      <div class="invoice-footer">
+        <p>Thank you for choosing MediCare Hospital. Get well soon!</p>
+        <p class="disclaimer">This is a computer-generated invoice and does not require a signature.</p>
+      </div>
+    </div>
+
+    <!-- Manage Bill (no-print) -->
+    <div class="no-print">
+      <!-- Add Service Item -->
+      @if (bill.paymentStatus !== 'PAID') {
+        <div class="section-card">
+          <h3>Add Service</h3>
+          <div class="add-item-form">
             <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Amount</label>
-                <input type="number" [(ngModel)]="paymentAmount" [max]="balanceDue" min="0.01" step="0.01" />
+              <div class="form-group flex-2">
+                <label>Service</label>
+                <select [(ngModel)]="selectedServiceId">
+                  <option [ngValue]="null" disabled>Select a service...</option>
+                  @for (svc of services; track svc.id) {
+                    <option [ngValue]="svc.id">{{ svc.name }} - {{ formatCurrency(svc.price) }}</option>
+                  }
+                </select>
               </div>
               <div class="form-group flex-1">
-                <label>Payment Method</label>
-                <select [(ngModel)]="paymentMethod">
-                  <option value="CASH">Cash</option>
-                  <option value="CARD">Card</option>
-                  <option value="UPI">UPI</option>
-                  <option value="INSURANCE">Insurance</option>
-                </select>
+                <label>Quantity</label>
+                <input type="number" [(ngModel)]="itemQuantity" min="1" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Subtotal</label>
+                <div class="computed-value">{{ formatCurrency(getItemSubtotal()) }}</div>
               </div>
               <div class="form-group btn-group">
                 <label>&nbsp;</label>
-                <button class="btn-pay" (click)="processPayment()" [disabled]="processingPayment || paymentAmount <= 0">
-                  @if (processingPayment) {
-                    <i class="pi pi-spin pi-spinner"></i> Processing...
+                <button class="btn-primary btn-add" (click)="addItem()" [disabled]="addingItem || !selectedServiceId">
+                  @if (addingItem) {
+                    <i class="pi pi-spin pi-spinner"></i>
                   } @else {
-                    <i class="pi pi-check"></i> Pay {{ paymentAmount | currency:'INR' }}
+                    <i class="pi pi-plus"></i> Add
                   }
                 </button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Payment Section -->
+        @if (bill.totalAmount > 0 && balanceDue > 0) {
+          <div class="section-card payment-section">
+            <h3>Process Payment</h3>
+            <div class="payment-form">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Amount</label>
+                  <input type="number" [(ngModel)]="paymentAmount" [max]="balanceDue" min="0.01" step="0.01" />
+                </div>
+                <div class="form-group flex-1">
+                  <label>Payment Method</label>
+                  <select [(ngModel)]="paymentMethod">
+                    <option value="CASH">Cash</option>
+                    <option value="CARD">Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="INSURANCE">Insurance</option>
+                  </select>
+                </div>
+                <div class="form-group btn-group">
+                  <label>&nbsp;</label>
+                  <button class="btn-pay" (click)="processPayment()" [disabled]="processingPayment || paymentAmount <= 0">
+                    @if (processingPayment) {
+                      <i class="pi pi-spin pi-spinner"></i> Processing...
+                    } @else {
+                      <i class="pi pi-check"></i> Pay {{ formatCurrency(paymentAmount) }}
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
       }
-    }
+    </div>
   }
 </div>

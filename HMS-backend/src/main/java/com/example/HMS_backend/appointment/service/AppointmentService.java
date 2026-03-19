@@ -8,6 +8,10 @@ import com.example.HMS_backend.appointment.mapper.AppointmentMapper;
 import com.example.HMS_backend.appointment.repository.AppointmentRepository;
 import com.example.HMS_backend.entity.User;
 import com.example.HMS_backend.exception.ResourceNotFoundException;
+import com.example.HMS_backend.notification.enums.NotificationType;
+import com.example.HMS_backend.notification.service.NotificationService;
+import com.example.HMS_backend.patient.entity.Patient;
+import com.example.HMS_backend.patient.repository.PatientRepository;
 import com.example.HMS_backend.repository.UserRepository;
 import com.example.HMS_backend.security.enums.Role;
 import lombok.RequiredArgsConstructor;
@@ -16,15 +20,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
 
+    private static final DateTimeFormatter NOTIFICATION_FORMATTER =
+            DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
+
     private final AppointmentRepository appointmentRepository;
     private final AppointmentMapper appointmentMapper;
     private final UserRepository userRepository;
+    private final PatientRepository patientRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public AppointmentResponse createAppointment(AppointmentRequest request) {
@@ -56,6 +66,19 @@ public class AppointmentService {
 
         Appointment appointment = appointmentMapper.toEntity(request);
         Appointment saved = appointmentRepository.save(appointment);
+
+        // Notify the assigned doctor about the new appointment
+        Patient patient = patientRepository.findById(request.getPatientId()).orElse(null);
+        String patientName = patient != null
+                ? patient.getFirstName() + " " + patient.getLastName()
+                : "Patient #" + request.getPatientId();
+        String formattedTime = saved.getAppointmentTime().format(NOTIFICATION_FORMATTER);
+        notificationService.notifyUser(
+                "New appointment booked for you at " + formattedTime + " with patient " + patientName,
+                NotificationType.APPOINTMENT,
+                doctor.getUsername()
+        );
+
         return appointmentMapper.toResponse(saved);
     }
 
