@@ -206,7 +206,7 @@ import {
               <select [(ngModel)]="preferredWardId">
                 <option [ngValue]="null">No preference</option>
                 <option *ngFor="let ward of wards" [ngValue]="ward.id">
-                  {{ ward.name }} ({{ ward.type }})
+                  {{ ward.type }}
                 </option>
               </select>
             </div>

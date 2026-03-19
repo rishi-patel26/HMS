@@ -426,7 +426,7 @@
       border: 1px solid #f1f0fb;
 
       .ep-type-badge {
-        font-size: 0.75rem;
+        font-size: 0.5rem;
         font-weight: 700;
         color: #4f46e5;
         background: #f1f0fb;
@@ -980,6 +980,7 @@
 
 .episode-select-row {
   display: flex;
+  color: #334155;
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
