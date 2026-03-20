@@ -6,6 +6,7 @@ import {
 	OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subject, forkJoin, takeUntil } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -23,7 +24,7 @@ import {
 	selector: 'app-bed-management-workspace',
 	standalone: true,
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	imports: [CommonModule, ButtonModule, CardModule, TagModule],
+	imports: [CommonModule, FormsModule, ButtonModule, CardModule, TagModule],
 	template: `
 		<div class="page">
 			<p-card>
@@ -32,15 +33,6 @@ import {
 						<h1>Bed Management Workspace</h1>
 						<p>Queue-based allocation workflow for review, bed assignment, and discharge lifecycle.</p>
 					</div>
-					<button
-						pButton
-						type="button"
-						icon="pi pi-refresh"
-						label="Refresh"
-						class="p-button-outlined p-button-sm refresh-btn"
-						[disabled]="loading"
-						(click)="loadDashboard()"
-					></button>
 				</div>
 
 				@if (loading) {
@@ -195,43 +187,184 @@ import {
 							</div>
 						</section>
 
-						<!-- Available Beds -->
-						<section class="panel beds-panel">
+						<!-- Bed Management Table (all beds) -->
+						<section class="panel beds-panel full-width-panel">
 							<div class="panel-header">
-								<h2>Available Beds</h2>
-								<span class="badge-count avail">{{ availableBedCount }}</span>
+								<div class="panel-title-group">
+									<h2>Bed Management</h2>
+									<div class="bed-stats-row">
+										<span class="stat-chip stat-available">
+											<i class="pi pi-check-circle"></i>
+											{{ availableCount }} Available
+										</span>
+										<span class="stat-chip stat-occupied">
+											<i class="pi pi-user"></i>
+											{{ occupiedCount }} Occupied
+										</span>
+										<span class="stat-chip stat-maintenance">
+											<i class="pi pi-wrench"></i>
+											{{ maintenanceCount }} Maintenance
+										</span>
+									</div>
+								</div>
+								<div class="filter-row">
+									<div class="filter-group">
+										<label>Ward</label>
+										<select id="wardFilter" [(ngModel)]="selectedWardFilter" (change)="applyBedFilters()">
+											<option value="">All Wards</option>
+											@for (ward of wards; track ward.id) {
+												<option [value]="ward.id">{{ ward.name }}</option>
+											}
+										</select>
+									</div>
+									<div class="filter-group">
+										<label>Type</label>
+										<select id="typeFilter" [(ngModel)]="selectedTypeFilter" (change)="applyBedFilters()">
+											<option value="">All Types</option>
+											<option value="GENERAL">General</option>
+											<option value="ICU">ICU</option>
+											<option value="PRIVATE">Private</option>
+										</select>
+									</div>
+									<div class="filter-group">
+										<label>Status</label>
+										<select id="statusFilter" [(ngModel)]="selectedStatusFilter" (change)="applyBedFilters()">
+											<option value="">All Statuses</option>
+											<option value="AVAILABLE">Available</option>
+											<option value="OCCUPIED">Occupied</option>
+											<option value="MAINTENANCE">Maintenance</option>
+										</select>
+									</div>
+									<div class="filter-group search-group">
+										<label>Search</label>
+										<div class="search-input-wrap">
+											<i class="pi pi-search search-icon"></i>
+											<input
+												id="bedSearch"
+												type="text"
+												[(ngModel)]="bedSearchQuery"
+												(input)="applyBedFilters()"
+												placeholder="Bed number or ward..."
+												class="search-input"
+											/>
+											@if (bedSearchQuery) {
+												<button type="button" class="clear-btn" (click)="clearSearch()">
+													<i class="pi pi-times"></i>
+												</button>
+											}
+										</div>
+									</div>
+								</div>
 							</div>
+
 							<div class="table-wrap">
 								<table>
 									<thead>
 										<tr>
-											<th>Bed</th>
+											<th>#</th>
+											<th>Bed No.</th>
 											<th>Ward</th>
 											<th>Type</th>
 											<th>Status</th>
+											<th>Actions</th>
 										</tr>
 									</thead>
 									<tbody>
-										@if (beds.length === 0) {
+										@if (filteredBeds.length === 0) {
 											<tr>
-												<td colspan="4" class="empty-row">No beds found.</td>
+												<td colspan="6" class="empty-row">
+													<i class="pi pi-search" style="font-size:1.3rem;display:block;margin-bottom:0.4rem;color:#cbd5e1"></i>
+													No beds match the current filters.
+												</td>
 											</tr>
 										}
-										@for (bed of beds; track bed.id) {
-											<tr>
-												<td class="bed-num">{{ bed.bedNumber }}</td>
-												<td>{{ bed.wardName }}</td>
-												<td>{{ bed.bedType }}</td>
+										@for (bed of pagedBeds; track bed.id; let i = $index) {
+											<tr [class.row-maintenance]="bed.status === 'MAINTENANCE'" [class.row-occupied]="bed.status === 'OCCUPIED'">
+												<td class="row-index">{{ bedPageStart + i + 1 }}</td>
+												<td class="bed-num">
+													<span class="bed-num-badge">{{ bed.bedNumber }}</span>
+												</td>
+												<td class="ward-cell">{{ bed.wardName }}</td>
+												<td>
+													<span class="type-pill type-{{ bed.bedType.toLowerCase() }}">{{ bed.bedType }}</span>
+												</td>
 												<td>
 													<span class="status-pill" [ngClass]="'status-' + bed.status.toLowerCase()">
+														<i [class]="statusIcon(bed.status)"></i>
 														{{ bed.status | titlecase }}
 													</span>
+												</td>
+												<td class="action-cell">
+													@if (bed.status === 'AVAILABLE') {
+														<button
+															type="button"
+															class="tbl-action-btn maint-btn"
+															[disabled]="updatingBedId === bed.id"
+															(click)="markMaintenance(bed)"
+															title="Mark as Under Maintenance"
+														>
+															@if (updatingBedId === bed.id) {
+																<i class="pi pi-spin pi-spinner"></i>
+															} @else {
+																<i class="pi pi-wrench"></i>
+															}
+															Maintenance
+														</button>
+													} @else if (bed.status === 'MAINTENANCE') {
+														<button
+															type="button"
+															class="tbl-action-btn avail-btn"
+															[disabled]="updatingBedId === bed.id"
+															(click)="markAvailable(bed)"
+															title="Mark as Available"
+														>
+															@if (updatingBedId === bed.id) {
+																<i class="pi pi-spin pi-spinner"></i>
+															} @else {
+																<i class="pi pi-check-circle"></i>
+															}
+															Mark Available
+														</button>
+													} @else {
+														<span class="no-action-label">
+															<i class="pi pi-lock"></i> Managed via workflow
+														</span>
+													}
 												</td>
 											</tr>
 										}
 									</tbody>
 								</table>
 							</div>
+
+							@if (filteredBeds.length > 0) {
+								<div class="table-footer">
+									<span class="footer-info">Showing {{ bedPageStart + 1 }}–{{ bedPageEnd }} of {{ filteredBeds.length }} beds ({{ allBeds.length }} total)</span>
+									<div class="paginator">
+										<button class="pg-btn" [disabled]="bedPage === 1" (click)="setBedPage(1)" title="First page">
+											<i class="pi pi-angle-double-left"></i>
+										</button>
+										<button class="pg-btn" [disabled]="bedPage === 1" (click)="setBedPage(bedPage - 1)" title="Previous">
+											<i class="pi pi-angle-left"></i>
+										</button>
+										@for (p of bedPageNumbers; track p) {
+											<button class="pg-btn pg-num" [class.pg-active]="p === bedPage" (click)="setBedPage(p)">{{ p }}</button>
+										}
+										<button class="pg-btn" [disabled]="bedPage === bedTotalPages" (click)="setBedPage(bedPage + 1)" title="Next">
+											<i class="pi pi-angle-right"></i>
+										</button>
+										<button class="pg-btn" [disabled]="bedPage === bedTotalPages" (click)="setBedPage(bedTotalPages)" title="Last page">
+											<i class="pi pi-angle-double-right"></i>
+										</button>
+										<select class="pg-size-select" [(ngModel)]="bedPageSize" (change)="onBedPageSizeChange()" title="Rows per page">
+											<option [value]="5">5 / page</option>
+											<option [value]="10">10 / page</option>
+											<option [value]="20">20 / page</option>
+											<option [value]="50">50 / page</option>
+										</select>
+									</div>
+								</div>
+							}
 						</section>
 
 						<!-- Active Assignments -->
@@ -244,6 +377,7 @@ import {
 								<table>
 									<thead>
 										<tr>
+											<th>#</th>
 											<th>Encounter</th>
 											<th>Bed / Ward</th>
 											<th>Status</th>
@@ -254,11 +388,12 @@ import {
 									<tbody>
 										@if (assignments.length === 0) {
 											<tr>
-												<td colspan="5" class="empty-row">No active assignments.</td>
+												<td colspan="6" class="empty-row">No active assignments.</td>
 											</tr>
 										}
-										@for (asg of assignments; track asg.id) {
+										@for (asg of pagedAssignments; track asg.id; let i = $index) {
 											<tr>
+												<td class="row-index">{{ asgPageStart + i + 1 }}</td>
 												<td class="encounter-id">{{ asg.encounterId }}</td>
 												<td>
 													<span class="bed-num">{{ asg.bedNumber }}</span>
@@ -297,12 +432,80 @@ import {
 									</tbody>
 								</table>
 							</div>
+							@if (assignments.length > asgPageSize) {
+								<div class="table-footer">
+									<span class="footer-info">{{ asgPageStart + 1 }}–{{ asgPageEnd }} of {{ assignments.length }} assignments</span>
+									<div class="paginator">
+										<button class="pg-btn" [disabled]="asgPage === 1" (click)="setAsgPage(1)"><i class="pi pi-angle-double-left"></i></button>
+										<button class="pg-btn" [disabled]="asgPage === 1" (click)="setAsgPage(asgPage - 1)"><i class="pi pi-angle-left"></i></button>
+										@for (p of asgPageNumbers; track p) {
+											<button class="pg-btn pg-num" [class.pg-active]="p === asgPage" (click)="setAsgPage(p)">{{ p }}</button>
+										}
+										<button class="pg-btn" [disabled]="asgPage === asgTotalPages" (click)="setAsgPage(asgPage + 1)"><i class="pi pi-angle-right"></i></button>
+										<button class="pg-btn" [disabled]="asgPage === asgTotalPages" (click)="setAsgPage(asgTotalPages)"><i class="pi pi-angle-double-right"></i></button>
+									</div>
+								</div>
+							}
 						</section>
 
 					</div>
 				}
 			</p-card>
 		</div>
+
+		<!-- Reject Dialog -->
+		@if (showRejectDialog) {
+			<div class="modal-overlay" (click)="cancelReject()">
+				<div class="modal-box" (click)="$event.stopPropagation()">
+					<div class="modal-header">
+						<i class="pi pi-ban modal-icon reject-icon"></i>
+						<h3>Reject Allocation Request</h3>
+					</div>
+					<p class="modal-sub">Please provide a reason for rejecting this request.</p>
+					<textarea
+						id="rejectReason"
+						class="modal-textarea"
+						[(ngModel)]="rejectReason"
+						placeholder="Enter rejection reason..."
+						rows="3"
+					></textarea>
+					<div class="modal-actions">
+						<button type="button" class="modal-btn cancel-btn" (click)="cancelReject()">Cancel</button>
+						<button
+							type="button"
+							class="modal-btn confirm-reject-btn"
+							[disabled]="!rejectReason.trim()"
+							(click)="confirmReject()"
+						>
+							<i class="pi pi-ban"></i> Reject Request
+						</button>
+					</div>
+				</div>
+			</div>
+		}
+
+		<!-- Maintenance Confirm Dialog -->
+		@if (showMaintenanceDialog) {
+			<div class="modal-overlay" (click)="cancelMaintenance()">
+				<div class="modal-box" (click)="$event.stopPropagation()">
+					<div class="modal-header">
+						<i class="pi pi-wrench modal-icon maint-icon"></i>
+						<h3>Mark Bed as Under Maintenance</h3>
+					</div>
+					<p class="modal-sub">
+						Bed <strong>{{ pendingMaintenanceBed?.bedNumber }}</strong> in
+						<strong>{{ pendingMaintenanceBed?.wardName }}</strong> will be marked as under maintenance
+						and <strong>cannot be assigned</strong> to any patient until it is marked available again.
+					</p>
+					<div class="modal-actions">
+						<button type="button" class="modal-btn cancel-btn" (click)="cancelMaintenance()">Cancel</button>
+						<button type="button" class="modal-btn confirm-maint-btn" (click)="confirmMaintenance()">
+							<i class="pi pi-wrench"></i> Confirm Maintenance
+						</button>
+					</div>
+				</div>
+			</div>
+		}
 	`,
 	styles: [`
 		/* ── Layout ── */
@@ -317,7 +520,6 @@ import {
 		}
 		.header-text h1 { margin: 0 0 0.2rem; font-size: 1.25rem; color: #0f172a; font-weight: 700; }
 		.header-text p  { margin: 0; color: #64748b; font-size: 0.85rem; }
-		.refresh-btn { white-space: nowrap; }
 
 		/* States */
 		.loading-state, .error-state {
@@ -341,8 +543,9 @@ import {
 			gap: 1rem;
 			grid-template-columns: 1.4fr 1fr;
 			grid-template-areas:
-				'queue occupancy'
-				'beds  assign';
+				'queue     occupancy'
+				'beds-full beds-full'
+				'assign    assign';
 		}
 		.panel {
 			background: #fff;
@@ -350,24 +553,28 @@ import {
 			border-radius: 14px;
 			padding: 1rem 1.1rem;
 		}
-		.queue-panel    { grid-area: queue; }
-		.occupancy-panel{ grid-area: occupancy; }
-		.beds-panel     { grid-area: beds; }
-		.assign-panel   { grid-area: assign; }
+		.queue-panel       { grid-area: queue; }
+		.occupancy-panel   { grid-area: occupancy; }
+		.full-width-panel  { grid-area: beds-full; }
+		.assign-panel      { grid-area: assign; }
 
 		/* Panel header */
 		.panel-header {
 			display: flex;
-			align-items: center;
+			align-items: flex-start;
 			gap: 0.5rem;
 			margin-bottom: 0.9rem;
+			flex-wrap: wrap;
 		}
 		.panel-header h2 {
-			margin: 0;
+			margin: 0 0 0.2rem;
 			font-size: 0.93rem;
 			font-weight: 700;
 			color: #1e293b;
+		}
+		.panel-title-group {
 			flex: 1;
+			min-width: 0;
 		}
 		.badge-count {
 			background: #f1f5f9;
@@ -379,6 +586,101 @@ import {
 			border: 1px solid #e2e8f0;
 		}
 		.badge-count.avail { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+
+		/* Bed stats row */
+		.bed-stats-row {
+			display: flex;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+			margin-top: 0.4rem;
+		}
+		.stat-chip {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.3rem;
+			font-size: 0.72rem;
+			font-weight: 700;
+			padding: 0.18rem 0.55rem;
+			border-radius: 999px;
+			border: 1px solid transparent;
+		}
+		.stat-chip i { font-size: 0.65rem; }
+		.stat-available  { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+		.stat-occupied   { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+		.stat-maintenance{ background: #fef3c7; color: #92400e; border-color: #fde68a; }
+
+		/* Filter row */
+		.filter-row {
+			display: flex;
+			gap: 0.65rem;
+			align-items: flex-end;
+			flex-wrap: wrap;
+			margin-top: 0.2rem;
+		}
+		.filter-group {
+			display: flex;
+			flex-direction: column;
+			gap: 0.2rem;
+		}
+		.filter-group label {
+			font-size: 0.68rem;
+			font-weight: 700;
+			color: #94a3b8;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+		}
+		.filter-group select {
+			padding: 0.3rem 0.55rem;
+			border: 1px solid #e2e8f0;
+			border-radius: 8px;
+			font-size: 0.78rem;
+			color: #334155;
+			background: #f8fafc;
+			cursor: pointer;
+			outline: none;
+			min-width: 110px;
+			transition: border-color 0.15s;
+		}
+		.filter-group select:focus { border-color: #3b82f6; background: #fff; }
+
+		.search-group { flex: 1; min-width: 160px; }
+		.search-input-wrap {
+			position: relative;
+			display: flex;
+			align-items: center;
+		}
+		.search-icon {
+			position: absolute;
+			left: 0.55rem;
+			color: #94a3b8;
+			font-size: 0.75rem;
+			pointer-events: none;
+		}
+		.search-input {
+			width: 100%;
+			padding: 0.3rem 2rem 0.3rem 1.75rem;
+			border: 1px solid #e2e8f0;
+			border-radius: 8px;
+			font-size: 0.78rem;
+			color: #334155;
+			background: #f8fafc;
+			outline: none;
+			transition: border-color 0.15s;
+		}
+		.search-input:focus { border-color: #3b82f6; background: #fff; }
+		.clear-btn {
+			position: absolute;
+			right: 0.4rem;
+			background: none;
+			border: none;
+			color: #94a3b8;
+			cursor: pointer;
+			padding: 0.15rem;
+			font-size: 0.7rem;
+			display: flex;
+			align-items: center;
+		}
+		.clear-btn:hover { color: #475569; }
 
 		/* Queue items */
 		.queue-item {
@@ -409,11 +711,9 @@ import {
 			font-weight: 700;
 			border: 0 !important;
 		}
-		/* Priority chips */
 		.p-emergency { background: #fee2e2 !important; color: #991b1b !important; }
 		.p-urgent    { background: #fef3c7 !important; color: #92400e !important; }
 		.p-normal    { background: #dbeafe !important; color: #1e3a8a !important; }
-		/* Status chips */
 		.s-requested    { background: #fef9c3 !important; color: #854d0e !important; }
 		.s-under_review { background: #dbeafe !important; color: #1e40af !important; }
 		.s-allocated    { background: #dcfce7 !important; color: #166534 !important; }
@@ -505,7 +805,7 @@ import {
 		.empty-state i { font-size: 1.5rem; }
 		.empty-state.small { padding: 0.5rem; flex-direction: row; font-size: 0.8rem; justify-content: flex-start; }
 		.empty-state.small i { font-size: 0.9rem; }
-		.empty-row { text-align: center; color: #94a3b8; font-size: 0.82rem; padding: 1.25rem !important; }
+		.empty-row { text-align: center; color: #94a3b8; font-size: 0.82rem; padding: 1.5rem !important; }
 
 		/* Ward cards */
 		.ward-list { display: flex; flex-direction: column; gap: 0.55rem; }
@@ -553,43 +853,234 @@ import {
 		table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 		th {
 			text-align: left;
-			padding: 0.45rem 0.6rem;
-			border-bottom: 2px solid #f1f5f9;
+			padding: 0.5rem 0.75rem;
+			background: #f8fafc;
+			border-bottom: 2px solid #e2e8f0;
 			color: #64748b;
-			font-size: 0.72rem;
+			font-size: 0.7rem;
 			font-weight: 700;
 			text-transform: uppercase;
-			letter-spacing: 0.04em;
+			letter-spacing: 0.05em;
 			white-space: nowrap;
 		}
-		td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; }
+		th:first-child { border-radius: 8px 0 0 0; }
+		th:last-child  { border-radius: 0 8px 0 0; }
+		td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; vertical-align: middle; }
 		tr:last-child td { border-bottom: none; }
 		tr:hover td { background: #f8fafc; }
+		tr.row-maintenance td { background: #fffbeb; }
+		tr.row-maintenance:hover td { background: #fef3c7; }
+		tr.row-occupied td { background: #fff5f5; }
+		tr.row-occupied:hover td { background: #fee2e2; }
 
+		.row-index { color: #94a3b8; font-size: 0.73rem; font-weight: 600; width: 36px; }
+		.bed-num-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			background: #f1f5f9;
+			border: 1px solid #e2e8f0;
+			border-radius: 6px;
+			padding: 0.15rem 0.5rem;
+			font-weight: 700;
+			font-size: 0.8rem;
+			color: #0f172a;
+			font-family: monospace;
+		}
+		.ward-cell { color: #475569; }
 		.bed-num { font-weight: 700; color: #0f172a; }
 		.ward-sub { display: block; font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem; }
 		.encounter-id { font-family: monospace; font-size: 0.78rem; color: #475569; }
 		.date-cell { color: #64748b; font-size: 0.77rem; }
 
-		/* Status pills */
-		.status-pill {
+		/* Type pills */
+		.type-pill {
 			display: inline-block;
-			border-radius: 999px;
-			padding: 0.18rem 0.55rem;
+			border-radius: 6px;
+			padding: 0.15rem 0.45rem;
 			font-size: 0.68rem;
 			font-weight: 700;
 		}
-		.status-available   { background: #dcfce7; color: #166534; }
-		.status-occupied    { background: #fee2e2; color: #991b1b; }
-		.status-maintenance { background: #f1f5f9; color: #334155; }
+		.type-icu     { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+		.type-general { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+		.type-private { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+
+		/* Status pills */
+		.status-pill {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.25rem;
+			border-radius: 999px;
+			padding: 0.2rem 0.6rem;
+			font-size: 0.68rem;
+			font-weight: 700;
+		}
+		.status-pill i { font-size: 0.6rem; }
+		.status-available   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+		.status-occupied    { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+		.status-maintenance { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 		.asg-allocated { background: #dbeafe; color: #1e40af; }
 		.asg-admitted  { background: #dcfce7; color: #166534; }
+
+		/* Table action buttons */
+		.action-cell { width: 160px; }
+		.tbl-action-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.3rem;
+			padding: 0.3rem 0.65rem;
+			border-radius: 8px;
+			border: 1px solid;
+			font-size: 0.73rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background 0.15s, border-color 0.15s;
+			white-space: nowrap;
+		}
+		.tbl-action-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+		.maint-btn {
+			background: #fffbeb;
+			border-color: #fde68a;
+			color: #92400e;
+		}
+		.maint-btn:hover:not(:disabled) { background: #fef3c7; border-color: #fcd34d; }
+		.avail-btn {
+			background: #f0fdf4;
+			border-color: #86efac;
+			color: #166534;
+		}
+		.avail-btn:hover:not(:disabled) { background: #dcfce7; border-color: #4ade80; }
+		.no-action-label {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.25rem;
+			font-size: 0.72rem;
+			color: #94a3b8;
+			font-style: italic;
+		}
+		.no-action-label i { font-size: 0.65rem; }
+
+		/* Table footer + paginator */
+		.table-footer {
+			padding: 0.55rem 0.75rem;
+			font-size: 0.73rem;
+			color: #94a3b8;
+			border-top: 1px solid #f1f5f9;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+		}
+		.footer-info { font-size: 0.71rem; color: #94a3b8; white-space: nowrap; }
+		.paginator {
+			display: flex;
+			align-items: center;
+			gap: 0.25rem;
+			flex-wrap: wrap;
+		}
+		.pg-btn {
+			min-width: 30px; height: 30px;
+			display: inline-flex; align-items: center; justify-content: center;
+			border: 1px solid #e2e8f0; border-radius: 7px;
+			background: #f8fafc; color: #475569;
+			font-size: 0.72rem; font-weight: 600; cursor: pointer;
+			transition: background 0.12s, border-color 0.12s;
+			padding: 0 0.3rem;
+		}
+		.pg-btn:hover:not(:disabled) { background: #e2e8f0; border-color: #cbd5e1; }
+		.pg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+		.pg-num { min-width: 30px; }
+		.pg-active { background: #1e40af !important; color: #fff !important; border-color: #1e40af !important; }
+		.pg-size-select {
+			height: 30px; padding: 0 0.4rem; border: 1px solid #e2e8f0; border-radius: 7px;
+			background: #f8fafc; color: #475569; font-size: 0.72rem; cursor: pointer; outline: none;
+			margin-left: 0.25rem;
+		}
+		.pg-size-select:focus { border-color: #3b82f6; }
+
+		/* Modal overlay */
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(15, 23, 42, 0.45);
+			backdrop-filter: blur(3px);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 9999;
+			animation: fadeIn 0.15s ease;
+		}
+		@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+		.modal-box {
+			background: #fff;
+			border-radius: 16px;
+			padding: 1.5rem;
+			width: 100%;
+			max-width: 440px;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+			animation: slideUp 0.18s ease;
+		}
+		@keyframes slideUp {
+			from { transform: translateY(12px); opacity: 0; }
+			to   { transform: translateY(0);    opacity: 1; }
+		}
+		.modal-header {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			margin-bottom: 0.6rem;
+		}
+		.modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; }
+		.modal-icon { font-size: 1.25rem; }
+		.reject-icon { color: #ef4444; }
+		.maint-icon  { color: #d97706; }
+		.modal-sub { font-size: 0.83rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5; }
+		.modal-textarea {
+			width: 100%;
+			box-sizing: border-box;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			padding: 0.6rem 0.75rem;
+			font-size: 0.82rem;
+			color: #334155;
+			resize: vertical;
+			outline: none;
+			font-family: inherit;
+			margin-bottom: 1rem;
+			transition: border-color 0.15s;
+		}
+		.modal-textarea:focus { border-color: #3b82f6; }
+		.modal-actions {
+			display: flex;
+			gap: 0.6rem;
+			justify-content: flex-end;
+		}
+		.modal-btn {
+			padding: 0.45rem 1rem;
+			border-radius: 8px;
+			font-size: 0.82rem;
+			font-weight: 600;
+			cursor: pointer;
+			border: 1px solid;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.35rem;
+			transition: background 0.15s;
+		}
+		.modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+		.cancel-btn { background: #f8fafc; border-color: #e2e8f0; color: #475569; }
+		.cancel-btn:hover { background: #f1f5f9; }
+		.confirm-reject-btn { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+		.confirm-reject-btn:hover:not(:disabled) { background: #fee2e2; }
+		.confirm-maint-btn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+		.confirm-maint-btn:hover:not(:disabled) { background: #fef3c7; }
 
 		/* Responsive */
 		@media (max-width: 1200px) {
 			.workspace-grid {
 				grid-template-columns: 1fr;
-				grid-template-areas: 'queue' 'occupancy' 'beds' 'assign';
+				grid-template-areas: 'queue' 'occupancy' 'beds-full' 'assign';
 			}
 		}
 	`],
@@ -597,19 +1088,55 @@ import {
 export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 	queue: BedAllocationRequestItem[] = [];
 	wards: WardItem[] = [];
-	beds: BedItem[] = [];
+	allBeds: BedItem[] = [];
+	filteredBeds: BedItem[] = [];
+	pagedBeds: BedItem[] = [];
 	assignments: BedAssignmentItem[] = [];
 
 	loading = false;
 	errorMessage = '';
 
-	/** Tracks which request has the allocation panel open */
+	// Filters
+	bedSearchQuery = '';
+	selectedWardFilter = '';
+	selectedTypeFilter = '';
+	selectedStatusFilter = '';
+
+	// Bed pagination
+	bedPage     = 1;
+	bedPageSize = 10;
+
+	get bedTotalPages()  { return Math.max(1, Math.ceil(this.filteredBeds.length / this.bedPageSize)); }
+	get bedPageStart()   { return (this.bedPage - 1) * this.bedPageSize; }
+	get bedPageEnd()     { return Math.min(this.bedPage * this.bedPageSize, this.filteredBeds.length); }
+	get bedPageNumbers() { return this.buildPageRange(this.bedPage, this.bedTotalPages); }
+
+	// Assignment pagination
+	asgPage     = 1;
+	asgPageSize = 8;
+	get pagedAssignments() { return this.assignments.slice(this.asgPageStart, this.asgPageEnd); }
+	get asgTotalPages()    { return Math.max(1, Math.ceil(this.assignments.length / this.asgPageSize)); }
+	get asgPageStart()     { return (this.asgPage - 1) * this.asgPageSize; }
+	get asgPageEnd()       { return Math.min(this.asgPage * this.asgPageSize, this.assignments.length); }
+	get asgPageNumbers()   { return this.buildPageRange(this.asgPage, this.asgTotalPages); }
+
+	// Allocation
 	openAllocationRequestId: number | null = null;
-
-	/** Per-request loading state for assignable beds */
 	loadingBeds: Record<number, boolean> = {};
-
 	private assignableByRequest: Record<number, BedItem[]> = {};
+
+	// Maintenance dialog
+	showMaintenanceDialog = false;
+	pendingMaintenanceBed: BedItem | null = null;
+
+	// Reject dialog
+	showRejectDialog = false;
+	rejectReason = '';
+	private pendingRejectRequest: BedAllocationRequestItem | null = null;
+
+	// Inline update tracking
+	updatingBedId: number | null = null;
+
 	private destroy$ = new Subject<void>();
 
 	constructor(
@@ -626,7 +1153,7 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 		this.destroy$.complete();
 	}
 
-	// ── Data loading ────────────────────────────────────────────────────────────
+	// ── Data loading ──────────────────────────────────────────────────────────
 
 	loadDashboard(): void {
 		this.loading = true;
@@ -637,16 +1164,17 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 		forkJoin({
 			queue:       this.bedManagementService.getPriorityQueue(),
 			wards:       this.bedManagementService.getWardOccupancy(),
-			beds:        this.bedManagementService.getBeds('AVAILABLE'),
-			assignments: this.bedManagementService.getAssignmentsByStatus('ACTIVE'),
+			beds:        this.bedManagementService.getAllBeds(),
+			assignments: this.bedManagementService.getActiveAssignments(),
 		})
 			.pipe(takeUntil(this.destroy$))
 			.subscribe({
 				next: ({ queue, wards, beds, assignments }) => {
 					this.queue       = queue;
 					this.wards       = wards;
-					this.beds        = beds;
+					this.allBeds     = beds;
 					this.assignments = assignments;
+					this.applyBedFilters();
 					this.loading     = false;
 					this.cdr.markForCheck();
 				},
@@ -658,11 +1186,77 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 			});
 	}
 
-	// ── Computed helpers ─────────────────────────────────────────────────────────
+	// ── Filter logic ──────────────────────────────────────────────────────────
 
-	get availableBedCount(): number {
-		return this.beds.filter(b => b.status === 'AVAILABLE').length;
+	applyBedFilters(): void {
+		const query  = this.bedSearchQuery.toLowerCase().trim();
+		const wardId = this.selectedWardFilter ? Number(this.selectedWardFilter) : null;
+		const type   = this.selectedTypeFilter;
+		const status = this.selectedStatusFilter;
+
+		this.filteredBeds = this.allBeds.filter(bed => {
+			if (wardId && bed.wardId !== wardId)   return false;
+			if (type   && bed.bedType !== type)    return false;
+			if (status && bed.status  !== status)  return false;
+			if (query) {
+				if (
+					!bed.bedNumber.toLowerCase().includes(query) &&
+					!bed.wardName.toLowerCase().includes(query)
+				) return false;
+			}
+			return true;
+		});
+		// Reset to page 1 whenever filters change
+		this.bedPage = 1;
+		this.updatePagedBeds();
+		this.cdr.markForCheck();
 	}
+
+	clearSearch(): void {
+		this.bedSearchQuery = '';
+		this.applyBedFilters();
+	}
+
+	// ── Pagination helpers ────────────────────────────────────────────────────
+
+	private updatePagedBeds(): void {
+		this.pagedBeds = this.filteredBeds.slice(this.bedPageStart, this.bedPageEnd);
+	}
+
+	setBedPage(page: number): void {
+		if (page < 1 || page > this.bedTotalPages) return;
+		this.bedPage = page;
+		this.updatePagedBeds();
+		this.cdr.markForCheck();
+	}
+
+	onBedPageSizeChange(): void {
+		this.bedPage = 1;
+		this.updatePagedBeds();
+		this.cdr.markForCheck();
+	}
+
+	setAsgPage(page: number): void {
+		if (page < 1 || page > this.asgTotalPages) return;
+		this.asgPage = page;
+		this.cdr.markForCheck();
+	}
+
+	/** Builds a compact page-number range: always shows first, last, current ±1 */
+	private buildPageRange(current: number, total: number): number[] {
+		if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+		const pages = new Set<number>();
+		pages.add(1);
+		pages.add(total);
+		for (let i = Math.max(1, current - 1); i <= Math.min(total, current + 1); i++) pages.add(i);
+		return Array.from(pages).sort((a, b) => a - b);
+	}
+
+	// ── Computed helpers ──────────────────────────────────────────────────────
+
+	get availableCount(): number    { return this.allBeds.filter(b => b.status === 'AVAILABLE').length; }
+	get occupiedCount(): number     { return this.allBeds.filter(b => b.status === 'OCCUPIED').length; }
+	get maintenanceCount(): number  { return this.allBeds.filter(b => b.status === 'MAINTENANCE').length; }
 
 	matchingBeds(req: BedAllocationRequestItem): BedItem[] {
 		return this.assignableByRequest[req.id] ?? [];
@@ -672,14 +1266,22 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 		return this.openAllocationRequestId === requestId;
 	}
 
-	/** Returns a CSS class string based on occupancy percentage */
 	occupancyClass(rate: number): string {
 		if (rate >= 85) return 'high';
 		if (rate >= 60) return 'med';
 		return 'low';
 	}
 
-	// ── Queue actions ─────────────────────────────────────────────────────────────
+	statusIcon(status: string): string {
+		switch (status) {
+			case 'AVAILABLE':   return 'pi pi-check-circle';
+			case 'OCCUPIED':    return 'pi pi-user';
+			case 'MAINTENANCE': return 'pi pi-wrench';
+			default:            return 'pi pi-circle';
+		}
+	}
+
+	// ── Queue actions ─────────────────────────────────────────────────────────
 
 	openAllocation(req: BedAllocationRequestItem): void {
 		if (this.openAllocationRequestId === req.id) {
@@ -690,11 +1292,8 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 		this.fetchAssignableBeds(req);
 	}
 
-	/** Fetches assignable beds for a request only if not already cached */
 	private fetchAssignableBeds(req: BedAllocationRequestItem): void {
-		if (this.assignableByRequest[req.id] !== undefined) {
-			return;
-		}
+		if (this.assignableByRequest[req.id] !== undefined) return;
 
 		this.loadingBeds = { ...this.loadingBeds, [req.id]: true };
 		this.cdr.markForCheck();
@@ -726,15 +1325,91 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 	}
 
 	reject(req: BedAllocationRequestItem): void {
-		// Replace window.prompt with a proper dialog in production (e.g. p-dialog or p-confirmDialog)
-		const reason = window.prompt('Enter rejection reason:');
-		if (!reason?.trim()) {
-			return;
-		}
-		this.executeAndRefresh(this.bedManagementService.rejectRequest(req.id, reason.trim()));
+		this.pendingRejectRequest = req;
+		this.rejectReason = '';
+		this.showRejectDialog = true;
+		this.cdr.markForCheck();
 	}
 
-	// ── Assignment actions ────────────────────────────────────────────────────────
+	cancelReject(): void {
+		this.showRejectDialog = false;
+		this.pendingRejectRequest = null;
+		this.rejectReason = '';
+		this.cdr.markForCheck();
+	}
+
+	confirmReject(): void {
+		if (!this.pendingRejectRequest || !this.rejectReason.trim()) return;
+		const req = this.pendingRejectRequest;
+		const reason = this.rejectReason.trim();
+		this.showRejectDialog = false;
+		this.pendingRejectRequest = null;
+		this.rejectReason = '';
+		this.executeAndRefresh(this.bedManagementService.rejectRequest(req.id, reason));
+	}
+
+	// ── Bed status actions ────────────────────────────────────────────────────
+
+	markMaintenance(bed: BedItem): void {
+		// Guard: only AVAILABLE beds can go to maintenance
+		if (bed.status !== 'AVAILABLE') return;
+		this.pendingMaintenanceBed = bed;
+		this.showMaintenanceDialog = true;
+		this.cdr.markForCheck();
+	}
+
+	cancelMaintenance(): void {
+		this.showMaintenanceDialog = false;
+		this.pendingMaintenanceBed = null;
+		this.cdr.markForCheck();
+	}
+
+	confirmMaintenance(): void {
+		if (!this.pendingMaintenanceBed) return;
+		const bed = this.pendingMaintenanceBed;
+		this.showMaintenanceDialog = false;
+		this.pendingMaintenanceBed = null;
+		this.updateBedStatusInline(bed, 'MAINTENANCE');
+	}
+
+	markAvailable(bed: BedItem): void {
+		// Guard: only MAINTENANCE beds can go back to AVAILABLE via this action
+		if (bed.status !== 'MAINTENANCE') return;
+		this.updateBedStatusInline(bed, 'AVAILABLE');
+	}
+
+	private updateBedStatusInline(bed: BedItem, newStatus: 'AVAILABLE' | 'MAINTENANCE'): void {
+		this.updatingBedId = bed.id;
+		this.cdr.markForCheck();
+
+		this.bedManagementService
+			.updateBedStatus(bed.id, newStatus)
+			.pipe(takeUntil(this.destroy$))
+			.subscribe({
+				next: (updated) => {
+					// Optimistically patch allBeds and re-filter
+					const idx = this.allBeds.findIndex(b => b.id === updated.id);
+					if (idx !== -1) {
+						this.allBeds = [
+							...this.allBeds.slice(0, idx),
+							{ ...this.allBeds[idx], status: updated.status },
+							...this.allBeds.slice(idx + 1),
+						];
+					}
+					// Invalidate assignable-beds cache for any open request
+					this.assignableByRequest = {};
+					this.updatingBedId = null;
+					this.applyBedFilters();
+				},
+				error: (err) => {
+					this.errorMessage = err?.error?.message || 'Failed to update bed status. Please try again.';
+					this.updatingBedId = null;
+					this.cdr.markForCheck();
+				},
+			});
+	}
+
+	// ── Assignment actions ────────────────────────────────────────────────────
 
 	admit(assignment: BedAssignmentItem): void {
 		this.executeAndRefresh(this.bedManagementService.admitPatient(assignment.id));
@@ -744,7 +1419,7 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 		this.executeAndRefresh(this.bedManagementService.dischargePatient(assignment.id));
 	}
 
-	// ── Formatting ────────────────────────────────────────────────────────────────
+	// ── Formatting ────────────────────────────────────────────────────────────
 
 	formatDateTime(dt: string): string {
 		if (!dt) return '—';
@@ -757,7 +1432,7 @@ export class BedManagementWorkspaceComponent implements OnInit, OnDestroy {
 		);
 	}
 
-	// ── Private helpers ───────────────────────────────────────────────────────────
+	// ── Private helpers ───────────────────────────────────────────────────────
 
 	private executeAndRefresh(operation$: import('rxjs').Observable<unknown>): void {
 		operation$.pipe(takeUntil(this.destroy$)).subscribe({

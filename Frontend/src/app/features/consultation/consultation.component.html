@@ -390,32 +390,6 @@
             </div>
           }
         </div>
-
-        <!-- Services Panel -->
-        <div class="detail-card">
-          <div class="card-label"><i class="pi pi-box"></i> Available Services</div>
-          @for (svc of services; track svc.id) {
-            <label class="service-item" [class.selected]="selectedServices.has(svc.id)">
-              <input
-                type="checkbox"
-                [checked]="selectedServices.has(svc.id)"
-                (change)="toggleService(svc)"
-                class="service-checkbox"
-              />
-              <span class="svc-name">{{ svc.name }}</span>
-              <span class="svc-category">{{ svc.category }}</span>
-              <span class="svc-price">{{ svc.price | currency }}</span>
-            </label>
-          }
-          @if (services.length === 0) {
-            <div class="empty-text">No services available</div>
-          }
-          @if (selectedServices.size > 0) {
-            <div class="selected-total">
-              <span>{{ selectedServices.size }} service(s) selected</span>
-            </div>
-          }
-        </div>
       </div>
 
       <!-- ===== RIGHT COLUMN: Consultation Form ===== -->

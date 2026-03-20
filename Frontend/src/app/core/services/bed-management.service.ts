@@ -116,6 +116,10 @@ export class BedManagementService {
     return this.http.put<BedAssignmentItem>(`${this.baseUrl}/assignments/${assignmentId}/transfer`, { newBedId, notes });
   }
 
+  updateBedStatus(bedId: number, status: 'AVAILABLE' | 'MAINTENANCE'): Observable<BedItem> {
+    return this.http.put<BedItem>(`${this.baseUrl}/beds/${bedId}/status`, { status });
+  }
+
   getDashboard(): Observable<BedManagerDashboard> {
     return this.http.get<BedManagerDashboard>(`${this.baseUrl}/dashboard`);
   }

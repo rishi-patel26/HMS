@@ -34,8 +34,6 @@ export class ConsultationComponent implements OnInit, OnDestroy {
   encounter: Encounter | null = null;
   patient: Patient | null = null;
   episodes: Episode[] = [];
-  services: ServiceCatalogItem[] = [];
-  selectedServices = new Set<number>();
   existingConsultation: Consultation | null = null;
   patientConsultationHistory: Consultation[] = [];
   saving = false;
@@ -61,7 +59,6 @@ export class ConsultationComponent implements OnInit, OnDestroy {
     private consultationService: ConsultationService,
     private patientService: PatientService,
     private episodeService: EpisodeService,
-    private serviceCatalogService: ServiceCatalogService,
     private messageService: MessageService,
     private cdr: ChangeDetectorRef,
     private authService: AuthService
@@ -125,7 +122,6 @@ export class ConsultationComponent implements OnInit, OnDestroy {
     this.patient = null;
     this.episodes = [];
     this.existingConsultation = null;
-    this.selectedServices.clear();
     this.consultationForm.reset();
     this.episodeForm.reset();
     this.showEpisodeForm = false;
@@ -147,13 +143,11 @@ export class ConsultationComponent implements OnInit, OnDestroy {
 
         forkJoin({
           patient: this.patientService.getPatientById(encounter.patientId),
-          episodes: this.episodeService.getEpisodesByPatient(encounter.patientId),
-          services: this.serviceCatalogService.getAllServices()
+          episodes: this.episodeService.getEpisodesByPatient(encounter.patientId)
         }).pipe(takeUntil(this.destroy$)).subscribe({
           next: (results) => {
             this.patient = results.patient;
             this.episodes = results.episodes;
-            this.services = results.services.filter(s => s.active);
             this.cdr.detectChanges();
             this.loadingHistory = true;
             this.consultationService.searchConsultations({ patientId: encounter.patientId })
@@ -197,14 +191,6 @@ export class ConsultationComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     });
-  }
-
-  toggleService(svc: ServiceCatalogItem): void {
-    if (this.selectedServices.has(svc.id)) {
-      this.selectedServices.delete(svc.id);
-    } else {
-      this.selectedServices.add(svc.id);
-    }
   }
 
   saveConsultation(): void {

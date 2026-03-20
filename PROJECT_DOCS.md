@@ -1357,3 +1357,85 @@ Change this immediately in production.
 ---
 
 *Generated from source: `/home/artemht/Desktop/HMS`*
+
+
+---
+
+## 📝 Recent Updates (2026-03-19)
+
+### Feature Enhancements
+
+#### 1. ✅ Bed Management Search Functionality
+- **Added**: Search bar in Bed Management Workspace
+- **Location**: `Frontend/src/app/features/dashboards/bed-manager/bed-management-workspace.component.ts`
+- **Features**:
+  - Search beds by bed number, ward name, bed type, or status
+  - Real-time filtering as user types
+  - Clear search button
+  - Filters across all beds (not just available)
+- **Usage**: Type in search box to filter beds instantly
+
+#### 2. ✅ Consultation Module Cleanup
+- **Removed**: "Available Services" section from consultation page
+- **Reason**: Services should only be managed in billing module
+- **Impact**: Cleaner consultation interface focused on medical care
+- **Files Modified**:
+  - `Frontend/src/app/features/consultation/consultation.component.html`
+  - `Frontend/src/app/features/consultation/consultation.component.ts`
+- **Removed Code**:
+  - Service catalog service injection
+  - Service selection logic (`toggleService` method)
+  - `services` and `selectedServices` properties
+  - Service panel UI
+
+#### 3. ✅ Bed Maintenance Status
+- **Status**: Already implemented
+- **Enum**: `BedStatus.MAINTENANCE` exists in backend
+- **API**: `PUT /api/bed-management/beds/{bedId}/status` endpoint available
+- **Usage**: Bed Manager and Admin can mark beds as MAINTENANCE
+- **Effect**: Beds marked as MAINTENANCE are excluded from allocation
+
+### Verified Features
+
+#### 1. ✅ Dashboard Charts Update Properly
+- **Admin Dashboard**: Daily trends and revenue charts refresh on date range change
+- **Doctor Dashboard**: Encounter and episode charts load on component init
+- **Nurse Dashboard**: Encounter status and today vs total charts render correctly
+- **Implementation**: Charts use Chart.js 4 with proper lifecycle management
+
+#### 2. ✅ Patient Timeline Updates
+- **Verified**: All patient-related operations update timeline
+- **Operations Tracked**:
+  - Patient registration
+  - Appointment creation/updates
+  - Encounter check-in
+  - Consultation creation/updates
+  - Episode creation/linking
+  - Bed allocation requests
+  - Bill creation
+- **Audit Trail**: All entities extend `BaseEntity` with JPA auditing
+
+### Code Quality Improvements
+
+#### Removed Unused Code
+- Service catalog integration from consultation component
+- Duplicate service selection logic
+- Unused imports and dependencies
+
+#### Performance Optimizations
+- Bed search uses client-side filtering (no API calls)
+- Chart instances properly destroyed on component cleanup
+- RxJS subscriptions properly unsubscribed using `takeUntil`
+
+### Testing Checklist
+
+- [x] Bed search filters correctly by all fields
+- [x] Consultation saves without service selection
+- [x] Admin can access consultation module
+- [x] Doctor can access consultation module
+- [x] Charts render and update properly
+- [x] No TypeScript compilation errors
+- [x] No console errors in browser
+
+---
+
