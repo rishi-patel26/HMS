@@ -3,6 +3,9 @@ package com.example.HMS_backend.user.service;
 import com.example.HMS_backend.entity.User;
 import com.example.HMS_backend.exception.DuplicateResourceException;
 import com.example.HMS_backend.exception.ResourceNotFoundException;
+import com.example.HMS_backend.notification.enums.NotificationType;
+import com.example.HMS_backend.notification.service.EmailService;
+import com.example.HMS_backend.notification.service.NotificationService;
 import com.example.HMS_backend.repository.UserRepository;
 import com.example.HMS_backend.security.enums.Role;
 import com.example.HMS_backend.user.dto.UserCreateRequest;
@@ -21,6 +24,8 @@ public class UserManagementService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -59,6 +64,22 @@ public class UserManagementService {
                 .build();
 
         User saved = userRepository.save(user);
+        
+        // Send welcome email with credentials
+        emailService.sendWelcomeEmail(
+            saved.getEmail(),
+            saved.getUsername(),
+            request.getPassword(), // Send plain password in email
+            saved.getRole().name()
+        );
+        
+        // Send in-app notification to the new user
+        notificationService.notifyUser(
+            String.format("Welcome to HMS! Your account has been created with role: %s", saved.getRole().name()),
+            NotificationType.GENERAL,
+            saved.getUsername()
+        );
+        
         return toResponse(saved);
     }
 

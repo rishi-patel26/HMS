@@ -43,12 +43,12 @@ import { ServiceCatalogComponent } from './features/service-catalog/service-cata
 import { UserManagementComponent } from './features/users/user-management.component';
 
 // Nurse components
-import { DoctorPatientsComponent } from './features/nurse/doctor-patients/doctor-patients.component';
 import { PatientCaseComponent } from './features/nurse/patient-case/patient-case.component';
 import { BedRequestComponent } from './features/nurse/bed-request/bed-request.component';
 import { NurseDashboardComponent } from '@features/dashboards/nurse-dashboard/nurse-dashboard.component';
 import { BedManagerDashboardComponent } from '@features/dashboards/bed-manager/bed-manager-dashboard.component';
 import { BedManagementWorkspaceComponent } from '@features/dashboards/bed-manager/bed-management-workspace.component';
+import { DoctorPatientsComponent } from '@features/nurse/doctor-patients/doctor-patients.components';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },

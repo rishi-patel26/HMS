@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotificationService } from '../../core/services/notification.service';
-import { Notification } from '../../core/models/hms.model';
+import { type Notification } from '../../core/models/hms.model';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-notification-panel',
@@ -182,7 +183,7 @@ export class NotificationPanelComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   unreadCount = 0;
   panelOpen = false;
-  private pollIntervalId: ReturnType<typeof setInterval> | null = null;
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private notificationService: NotificationService,
@@ -190,23 +191,27 @@ export class NotificationPanelComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.loadNotifications();
-    // Poll every 30 seconds
-    this.pollIntervalId = setInterval(() => this.loadNotifications(), 30000);
+    // Request browser notification permission
+    this.notificationService.requestNotificationPermission();
+
+    // Subscribe to real-time notifications via WebSocket
+    this.subscriptions.push(
+      this.notificationService.notifications$.subscribe(notifications => {
+        this.notifications = notifications;
+        this.cdr.detectChanges();
+      })
+    );
+
+    this.subscriptions.push(
+      this.notificationService.unreadCount$.subscribe(count => {
+        this.unreadCount = count;
+        this.cdr.detectChanges();
+      })
+    );
   }
 
   ngOnDestroy(): void {
-    if (this.pollIntervalId) clearInterval(this.pollIntervalId);
-  }
-
-  loadNotifications(): void {
-    this.notificationService.getMyNotifications().subscribe({
-      next: (data) => {
-        this.notifications = data;
-        this.unreadCount = data.filter(n => !n.isRead).length;
-        this.cdr.detectChanges();
-      }
-    });
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   togglePanel(): void {
@@ -221,9 +226,7 @@ export class NotificationPanelComponent implements OnInit, OnDestroy {
     if (notif.isRead) return;
     this.notificationService.markAsRead(notif.id).subscribe({
       next: () => {
-        notif.isRead = true;
-        this.unreadCount = Math.max(0, this.unreadCount - 1);
-        this.cdr.detectChanges();
+        this.notificationService.updateLocalNotificationAsRead(notif.id);
       }
     });
   }
@@ -231,9 +234,7 @@ export class NotificationPanelComponent implements OnInit, OnDestroy {
   markAllRead(): void {
     this.notificationService.markAllRead().subscribe({
       next: () => {
-        this.notifications.forEach(n => n.isRead = true);
-        this.unreadCount = 0;
-        this.cdr.detectChanges();
+        this.notificationService.updateAllLocalNotificationsAsRead();
       }
     });
   }

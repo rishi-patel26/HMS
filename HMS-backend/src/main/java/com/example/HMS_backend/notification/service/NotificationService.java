@@ -5,6 +5,7 @@ import com.example.HMS_backend.notification.entity.Notification;
 import com.example.HMS_backend.notification.enums.NotificationType;
 import com.example.HMS_backend.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /** Store a notification targeted at a specific user (by username). */
     @Transactional
@@ -24,7 +26,11 @@ public class NotificationService {
                 .type(type)
                 .targetUser(username)
                 .build();
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        
+        // Send real-time notification via WebSocket
+        NotificationResponse response = toResponse(saved);
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", response);
     }
 
     /** Store a notification targeted at all users with a specific role (e.g. "FRONTDESK"). */
@@ -35,7 +41,11 @@ public class NotificationService {
                 .type(type)
                 .targetRole(role)
                 .build();
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        
+        // Send real-time notification via WebSocket to all users with this role
+        NotificationResponse response = toResponse(saved);
+        messagingTemplate.convertAndSend("/topic/notifications/" + role, response);
     }
 
     /** Fetch all notifications for a user (user-specific + role-based). */
