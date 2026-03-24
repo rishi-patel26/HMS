@@ -52,6 +52,12 @@ export class AppointmentService {
     });
   }
 
+  getDoctorAppointmentsByDateRange(from: string, to: string): Observable<Appointment[]> {
+    return this.http.get<Appointment[]>(`${this.apiUrl}/doctor/by-date-range`, {
+      params: { from, to }
+    });
+  }
+
   deleteAppointment(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }

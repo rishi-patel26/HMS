@@ -20,6 +20,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByPatientIdOrderByAppointmentTimeDesc(Long patientId);
 
     List<Appointment> findByAppointmentTimeBetweenOrderByAppointmentTimeAsc(LocalDateTime start, LocalDateTime end);
+    
+    List<Appointment> findByAppointmentTimeBetween(LocalDateTime start, LocalDateTime end);
 
     long countByAppointmentTimeBetween(LocalDateTime start, LocalDateTime end);
 
@@ -30,4 +32,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByDoctorIdAndAppointmentTimeBetween(Long doctorId, LocalDateTime start, LocalDateTime end);
 
     List<Appointment> findByDoctorIdOrderByAppointmentTimeDesc(Long doctorId);
+    
+    @Query("SELECT COALESCE(a.department, 'General'), COUNT(a) FROM Appointment a GROUP BY a.department ORDER BY COUNT(a) DESC")
+    List<Object[]> countByDepartment();
 }

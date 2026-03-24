@@ -29,4 +29,12 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     List<Patient> searchPatients(@Param("query") String query);
 
     List<Patient> findTop50ByOrderByCreatedAtDesc();
+
+
+    @Query("SELECT p FROM Patient p WHERE " +
+           "p.firstNamePhonetic = :phoneticKey OR " +
+           "p.lastNamePhonetic = :phoneticKey OR " +
+           "p.fullNamePhonetic = :phoneticKey")
+    List<Patient> findByPhoneticKey(@Param("phoneticKey") String phoneticKey);
+
 }

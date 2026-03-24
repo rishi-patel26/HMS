@@ -442,6 +442,30 @@ export interface RevenueTrendResponse {
   revenueData: number[];
 }
 
+export interface EncounterStatusDistribution {
+  labels: string[];
+  data: number[];
+  colors: string[];
+}
+
+export interface AppointmentCalendarEvent {
+  id: number;
+  title: string;
+  start: string;
+  end: string;
+  patientName: string;
+  doctorName: string;
+  status: string;
+  backgroundColor: string;
+  borderColor: string;
+}
+
+export interface DepartmentStats {
+  departments: string[];
+  appointmentCounts: number[];
+  consultationCounts: number[];
+}
+
 // Notification models
 export type NotificationType = 'APPOINTMENT' | 'BED_ALLOCATION' | 'GENERAL';
 

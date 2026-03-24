@@ -1,18 +1,58 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { BedManagementService } from '@core/services/bed-management.service';
 import { BedAllocationRequestItem, BedEventItem } from '@core/models/hms.model';
 
 @Component({
   selector: 'app-bed-request',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="page">
       <div class="page-header">
         <h1>My Bed Allocation Requests</h1>
         <p class="subtitle">Track requests, workflow status, and timeline events</p>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section" *ngIf="!loading && requests.length > 0">
+        <div class="search-box">
+          <i class="pi pi-search search-icon"></i>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (input)="applyFilters()"
+            placeholder="Search by patient name, UHID, or encounter number..."
+            class="search-input"
+          />
+          <button *ngIf="searchQuery" (click)="clearSearch()" class="clear-btn">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+        <div class="filter-group">
+          <select [(ngModel)]="statusFilter" (change)="applyFilters()" class="filter-select">
+            <option value="">All Status</option>
+            <option value="REQUESTED">Requested</option>
+            <option value="UNDER_REVIEW">Under Review</option>
+            <option value="ALLOCATED">Allocated</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+          <select [(ngModel)]="priorityFilter" (change)="applyFilters()" class="filter-select">
+            <option value="">All Priority</option>
+            <option value="URGENT">Urgent</option>
+            <option value="HIGH">High</option>
+            <option value="NORMAL">Normal</option>
+            <option value="LOW">Low</option>
+          </select>
+          <select [(ngModel)]="bedTypeFilter" (change)="applyFilters()" class="filter-select">
+            <option value="">All Bed Types</option>
+            <option value="GENERAL">General</option>
+            <option value="ICU">ICU</option>
+            <option value="PRIVATE">Private</option>
+          </select>
+        </div>
       </div>
 
       <div class="loading-state" *ngIf="loading">
@@ -26,8 +66,14 @@ import { BedAllocationRequestItem, BedEventItem } from '@core/models/hms.model';
         <span class="hint">Raise requests from a patient's case view</span>
       </div>
 
-      <div class="requests-list" *ngIf="requests.length > 0">
-        <div class="request-card" *ngFor="let r of requests">
+      <div class="empty-state" *ngIf="!loading && requests.length > 0 && filteredRequests.length === 0">
+        <i class="pi pi-filter-slash"></i>
+        <p>No requests match your search criteria</p>
+        <button class="clear-filters-btn" (click)="clearAllFilters()">Clear Filters</button>
+      </div>
+
+      <div class="requests-list" *ngIf="filteredRequests.length > 0">
+        <div class="request-card" *ngFor="let r of filteredRequests">
           <div class="card-top">
             <div class="card-patient">
               <span class="patient-name">{{ r.patientName }}</span>
@@ -85,6 +131,105 @@ import { BedAllocationRequestItem, BedEventItem } from '@core/models/hms.model';
       h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 0.25rem 0; }
       .subtitle { color: #64748b; margin: 0; font-size: 0.9rem; }
     }
+
+    /* Search and Filter Section */
+    .search-filter-section {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 0.6rem 2.5rem 0.6rem 2.5rem;
+      border: 1.5px solid #ced4db;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #050506;
+      outline: none;
+      transition: border-color 0.15s;
+      background-color: white;
+      &:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+      &::placeholder {
+        color: #b8c0c9;
+      }
+    }
+    .clear-btn {
+      position: absolute;
+      right: 0.5rem;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      &:hover {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      i {
+        font-size: 0.85rem;
+      }
+    }
+    .filter-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .filter-select {
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: #475569;
+      background: white;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+      &:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+    }
+    .clear-filters-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      &:hover {
+        background: #5568d3;
+      }
+    }
+
     .loading-state, .empty-state {
       background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
@@ -133,13 +278,29 @@ import { BedAllocationRequestItem, BedEventItem } from '@core/models/hms.model';
     .evt-type { font-size: 0.76rem; color: #334155; font-weight: 700; text-transform: uppercase; }
     .evt-meta { font-size: 0.73rem; color: #64748b; }
     .evt-notes { font-size: 0.78rem; color: #475569; }
+
+    @media (max-width: 768px) {
+      .filter-group {
+        flex-direction: column;
+      }
+      .filter-select {
+        width: 100%;
+      }
+    }
   `]
 })
 export class BedRequestComponent implements OnInit {
   requests: BedAllocationRequestItem[] = [];
+  filteredRequests: BedAllocationRequestItem[] = [];
   selectedRequestId: number | null = null;
   selectedTimeline: BedEventItem[] = [];
   loading = false;
+
+  // Search and filter properties
+  searchQuery = '';
+  statusFilter = '';
+  priorityFilter = '';
+  bedTypeFilter = '';
 
   constructor(
     private bedManagementService: BedManagementService,
@@ -156,7 +317,9 @@ export class BedRequestComponent implements OnInit {
     this.bedManagementService.getMyRequests().subscribe({
       next: (data) => {
         this.requests = data;
+        this.filteredRequests = data;
         this.loading = false;
+        this.applyFilters();
         this.cdr.detectChanges();
       },
       error: () => {
@@ -164,6 +327,54 @@ export class BedRequestComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  applyFilters(): void {
+    const query = this.searchQuery.toLowerCase().trim();
+    
+    this.filteredRequests = this.requests.filter(request => {
+      // Search filter
+      if (query) {
+        const matchesSearch = 
+          request.patientName.toLowerCase().includes(query) ||
+          request.patientUhid.toLowerCase().includes(query) ||
+          request.encounterNumber.toLowerCase().includes(query);
+        
+        if (!matchesSearch) return false;
+      }
+
+      // Status filter
+      if (this.statusFilter && request.status !== this.statusFilter) {
+        return false;
+      }
+
+      // Priority filter
+      if (this.priorityFilter && request.priority !== this.priorityFilter) {
+        return false;
+      }
+
+      // Bed type filter
+      if (this.bedTypeFilter && request.requiredBedType !== this.bedTypeFilter) {
+        return false;
+      }
+
+      return true;
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.applyFilters();
+  }
+
+  clearAllFilters(): void {
+    this.searchQuery = '';
+    this.statusFilter = '';
+    this.priorityFilter = '';
+    this.bedTypeFilter = '';
+    this.applyFilters();
   }
 
   openCase(encounterId: number): void {

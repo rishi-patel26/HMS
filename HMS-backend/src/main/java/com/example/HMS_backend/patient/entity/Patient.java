@@ -42,4 +42,16 @@ public class Patient extends BaseEntity {
     @Column(name = "emergency_contact", length = 20)
     private String emergencyContact;
 
+
+    // Phonetic search fields
+    @Column(name = "first_name_phonetic")
+    private String firstNamePhonetic;
+
+    @Column(name = "last_name_phonetic")
+    private String lastNamePhonetic;
+
+    @Column(name = "full_name_phonetic")
+    private String fullNamePhonetic;
+
+
 }

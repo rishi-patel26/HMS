@@ -4,9 +4,7 @@ import com.example.HMS_backend.appointment.repository.AppointmentRepository;
 import com.example.HMS_backend.billing.repository.BillRepository;
 import com.example.HMS_backend.billing.enums.PaymentStatus;
 import com.example.HMS_backend.consultation.repository.ConsultationRepository;
-import com.example.HMS_backend.dashboard.dto.DailyTrendResponse;
-import com.example.HMS_backend.dashboard.dto.DashboardStats;
-import com.example.HMS_backend.dashboard.dto.RevenueTrendResponse;
+import com.example.HMS_backend.dashboard.dto.*;
 import com.example.HMS_backend.encounter.entity.Encounter;
 import com.example.HMS_backend.encounter.enums.EncounterStatus;
 import com.example.HMS_backend.encounter.repository.EncounterRepository;
@@ -201,5 +199,92 @@ public class DashboardService {
             map.put(day, count);
         }
         return map;
+    }
+    
+    public EncounterStatusDistribution getEncounterStatusDistribution() {
+        List<Object[]> results = encounterRepository.countByStatus();
+        
+        List<String> labels = new ArrayList<>();
+        List<Long> data = new ArrayList<>();
+        List<String> colors = new ArrayList<>();
+        
+        Map<String, String> statusColors = Map.of(
+            "WAITING", "#FFA726",
+            "IN_CONSULTATION", "#42A5F5",
+            "COMPLETED", "#66BB6A",
+            "CANCELLED", "#EF5350"
+        );
+        
+        for (Object[] row : results) {
+            String status = (String) row[0];
+            Long count = ((Number) row[1]).longValue();
+            labels.add(status.replace("_", " "));
+            data.add(count);
+            colors.add(statusColors.getOrDefault(status, "#9E9E9E"));
+        }
+        
+        return EncounterStatusDistribution.builder()
+                .labels(labels)
+                .data(data)
+                .colors(colors)
+                .build();
+    }
+    
+    public List<AppointmentCalendarEvent> getAppointmentCalendarEvents(LocalDate from, LocalDate to) {
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime end = to.plusDays(1).atStartOfDay();
+        
+        var appointments = appointmentRepository.findByAppointmentTimeBetween(start, end);
+        
+        Map<String, String> statusColors = Map.of(
+            "SCHEDULED", "#42A5F5",
+            "CHECKED_IN", "#66BB6A",
+            "CANCELLED", "#EF5350",
+            "COMPLETED", "#9E9E9E"
+        );
+        
+        return appointments.stream().map(apt -> {
+            var patient = patientRepository.findById(apt.getPatientId()).orElse(null);
+            var doctor = userRepository.findById(apt.getDoctorId()).orElse(null);
+            
+            String patientName = patient != null ? patient.getFirstName() + " " + patient.getLastName() : "Unknown";
+            String doctorName = doctor != null ? "Dr. " + doctor.getUsername() : "Unknown";
+            String color = statusColors.getOrDefault(apt.getStatus().name(), "#9E9E9E");
+            
+            return AppointmentCalendarEvent.builder()
+                    .id(apt.getId())
+                    .title(patientName + " - " + doctorName)
+                    .start(apt.getAppointmentTime())
+                    .end(apt.getAppointmentTime().plusMinutes(30))
+                    .patientName(patientName)
+                    .doctorName(doctorName)
+                    .status(apt.getStatus().name())
+                    .backgroundColor(color)
+                    .borderColor(color)
+                    .build();
+        }).toList();
+    }
+    
+    public DepartmentStats getDepartmentStats() {
+        List<Object[]> deptAppointments = appointmentRepository.countByDepartment();
+        
+        Map<String, Long> appointmentMap = new LinkedHashMap<>();
+        for (Object[] row : deptAppointments) {
+            String dept = row[0] != null ? (String) row[0] : "General";
+            Long count = ((Number) row[1]).longValue();
+            appointmentMap.put(dept, count);
+        }
+        
+        List<String> departments = new ArrayList<>(appointmentMap.keySet());
+        List<Long> appointmentCounts = new ArrayList<>(appointmentMap.values());
+        List<Long> consultationCounts = departments.stream()
+                .map(dept -> 0L) // Can be enhanced with actual consultation data
+                .toList();
+        
+        return DepartmentStats.builder()
+                .departments(departments)
+                .appointmentCounts(appointmentCounts)
+                .consultationCounts(consultationCounts)
+                .build();
     }
 }

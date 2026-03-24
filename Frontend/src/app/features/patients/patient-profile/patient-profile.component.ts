@@ -23,7 +23,7 @@ export class PatientProfileComponent implements OnInit, OnDestroy {
   episodes: Episode[] = [];
   loading = true;
   activeTab = 'info';
-
+  patientId!: number;
   private refreshSub!: Subscription;
 
   constructor(
@@ -35,10 +35,11 @@ export class PatientProfileComponent implements OnInit, OnDestroy {
     private episodeService: EpisodeService,
     private dataRefresh: DataRefreshService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.patientId = id;
     if (id) {
       this.loadPatient(id);
 
@@ -68,19 +69,33 @@ export class PatientProfileComponent implements OnInit, OnDestroy {
   }
 
   loadRelatedData(patientId: number): void {
-    this.appointmentService.getAppointmentsByPatient(patientId).subscribe({
-      next: (data: Appointment[]) => { this.appointments = data; this.cdr.detectChanges(); }
-    });
-    this.encounterService.getEncountersByPatient(patientId).subscribe({
-      next: (data: Encounter[]) => { this.encounters = data; this.cdr.detectChanges(); }
-    });
-    this.episodeService.getEpisodesByPatient(patientId).subscribe({
-      next: (data: Episode[]) => { this.episodes = data; this.cdr.detectChanges(); }
-    });
+
+    // this.encounterService.getEncountersByPatient(patientId).subscribe({
+    //   next: (data: Encounter[]) => { this.encounters = data; this.cdr.detectChanges(); }
+    // });
+    // this.episodeService.getEpisodesByPatient(patientId).subscribe({
+    //   next: (data: Episode[]) => { this.episodes = data; this.cdr.detectChanges(); }
+    // });
   }
 
   setTab(tab: string): void {
     this.activeTab = tab;
+
+    if (tab === 'appointments' && this.appointments.length === 0) {
+      this.appointmentService.getAppointmentsByPatient(this.patientId).subscribe({
+        next: (data: Appointment[]) => { this.appointments = data; this.cdr.detectChanges(); }
+      });
+    }
+    else if (tab === 'encounters' && this.encounters.length === 0) {
+      this.encounterService.getEncountersByPatient(this.patientId).subscribe({
+        next: (data: Encounter[]) => { this.encounters = data; this.cdr.detectChanges(); }
+      });
+    }
+    else if (tab === 'episodes' && this.episodes.length === 0) {
+      this.episodeService.getEpisodesByPatient(this.patientId).subscribe({
+        next: (data: Episode[]) => { this.episodes = data; this.cdr.detectChanges(); }
+      });
+    }
   }
 
   bookAppointment(): void {

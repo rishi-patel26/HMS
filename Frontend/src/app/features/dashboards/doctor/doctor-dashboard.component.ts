@@ -1,16 +1,23 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '@core/services/auth.service';
 import { DashboardService } from '@core/services/dashboard.service';
-import { DashboardStats } from '@core/models/hms.model';
+import { AppointmentService } from '@core/services/appointment.service';
+import { DashboardStats, Appointment } from '@core/models/hms.model';
 import { Chart, DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { NotificationPanelComponent } from '../../../shared/components/notification-panel.component';
+import { CalendarOptions } from '@fullcalendar/core';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import { FullCalendarModule } from '@fullcalendar/angular';
 
 @Component({
   selector: 'app-doctor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, NotificationPanelComponent],
+  imports: [CommonModule, RouterLink, FormsModule, NotificationPanelComponent, FullCalendarModule],
   template: `
     <div class="dashboard-page">
       <div class="page-header">
@@ -125,6 +132,12 @@ import { NotificationPanelComponent } from '../../../shared/components/notificat
           </div>
         </div>
 
+        <!-- Appointment Calendar -->
+        <h2 class="section-title">My Appointment Calendar</h2>
+        <div class="calendar-section">
+          <full-calendar [options]="calendarOptions"></full-calendar>
+        </div>
+
         <!-- Quick Actions -->
         <div class="quick-actions">
           <a routerLink="/consultation" class="action-card">
@@ -190,6 +203,115 @@ import { NotificationPanelComponent } from '../../../shared/components/notificat
     }
     .chart-wrap { position: relative; height: 260px; }
     .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+
+    /* Date Filter */
+    .date-filter-section {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .date-filter {
+      display: flex;
+      align-items: flex-end;
+      gap: 1rem;
+    }
+    .date-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+      }
+    }
+    .date-input {
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #1e293b;
+      background: white;
+      outline: none;
+      &:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+      }
+    }
+
+    /* Calendar Section */
+    .calendar-section {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 2rem;
+      color: #0a111d;
+      font-size: 1rem;
+
+      ::ng-deep {
+        .fc {
+          font-family: inherit;
+        }
+        .fc-toolbar-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+        .fc-button {
+          background: #667eea;
+          border-color: #667eea;
+          text-transform: capitalize;
+          font-size: 0.85rem;
+          padding: 0.4rem 0.8rem;
+          &:hover {
+            background: #5568d3;
+            border-color: #5568d3;
+          }
+          &:disabled {
+            opacity: 0.5;
+          }
+        }
+        .fc-button-active {
+          background: #4f46e5 !important;
+          border-color: #4f46e5 !important;
+        }
+        .fc-daygrid-day-number {
+          
+          font-weight: 500;
+          text-align: center;
+        }
+        .fc-col-header-cell-cushion {
+          color: #242d39;
+          font-weight: 400;
+          font-size: 0.85rem;
+        }
+        .fc-event {
+          border-radius: 4px;
+          padding: 2px 4px;
+          font-size: 0.75rem;
+          cursor: pointer;
+          border: none;
+        }
+        .fc-daygrid-day-top {
+          justify-content: center;
+        }
+        .fc-daygrid-day.fc-day-today {
+        }
+        .fc-timegrid-slot {
+          height: 3rem;
+        }
+        .fc-timegrid-event {
+          border-radius: 4px;
+          border: none;
+          padding: 10px;
+        }
+      }
+    }
+
     .action-card {
       background: white; border-radius: 12px; padding: 1.25rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-decoration: none;
@@ -215,21 +337,51 @@ import { NotificationPanelComponent } from '../../../shared/components/notificat
     }
   `]
 })
-export class DoctorDashboardComponent implements OnInit {
+export class DoctorDashboardComponent implements OnInit, OnDestroy {
   username = '';
   stats: DashboardStats | null = null;
   loading = false;
   errorMessage = '';
 
+  // Appointment calendar data
+  doctorAppointments: Appointment[] = [];
+
+  // FullCalendar configuration
+  calendarOptions: CalendarOptions = {
+    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+    initialView: 'timeGridWeek',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    events: [],
+    eventClick: this.handleEventClick.bind(this),
+    height: 'auto',
+    slotMinTime: '08:00:00',
+    slotMaxTime: '20:00:00',
+    allDaySlot: false,
+    nowIndicator: true,
+    eventColor: '#4261e9'
+  };
+
+  private charts: Chart[] = [];
+
   constructor(
     private authService: AuthService,
     private dashboardService: DashboardService,
+    private appointmentService: AppointmentService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.username = this.authService.getUsername();
     this.loadStats();
+    this.loadAppointmentCalendar();
+  }
+
+  ngOnDestroy(): void {
+    this.destroyCharts();
   }
 
   loadStats(): void {
@@ -250,6 +402,61 @@ export class DoctorDashboardComponent implements OnInit {
     });
   }
 
+  loadAppointmentCalendar(): void {
+    this.appointmentService.getDoctorAllAppointments().subscribe({
+      next: (appointments: Appointment[]) => {
+        this.doctorAppointments = appointments;
+        this.calendarOptions = {
+          ...this.calendarOptions,
+          events: appointments.map((apt: Appointment) => ({
+            id: apt.id.toString(),
+            title: `${apt.patientName}`,
+            start: apt.appointmentTime,
+            backgroundColor: this.getStatusColor(apt.status),
+            borderColor: this.getStatusColor(apt.status),
+            extendedProps: {
+              patientName: apt.patientName,
+              patientUhid: apt.patientUhid,
+              department: apt.department,
+              status: apt.status,
+              appointmentId: apt.id
+            }
+          }))
+        };
+        this.cdr.detectChanges();
+      },
+      error: () => console.error('Failed to load doctor appointments')
+    });
+  }
+
+  handleEventClick(info: any): void {
+    const event = info.event;
+    const startTime = new Date(event.start).toLocaleString('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+    const details = `Appointment Details:\n\nPatient: ${event.extendedProps.patientName}\nUHID: ${event.extendedProps.patientUhid}\nDepartment: ${event.extendedProps.department}\nStatus: ${event.extendedProps.status}\nTime: ${startTime}`;
+    alert(details);
+  }
+
+  getStatusColor(status: string): string {
+    const colors: Record<string, string> = {
+      'SCHEDULED': '#667eea',
+      'CONFIRMED': '#66BB6A',
+      'COMPLETED': '#42A5F5',
+      'CANCELLED': '#EF5350',
+      'NO_SHOW': '#FFA726'
+    };
+    return colors[status] || '#667eea';
+  }
+
+  private formatDate(d: Date): string {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private renderCharts(): void {
     if (!this.stats) return;
     Chart.register(DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -257,7 +464,7 @@ export class DoctorDashboardComponent implements OnInit {
     // Today's queue breakdown doughnut
     const doughnutEl = document.getElementById('docDoughnut') as HTMLCanvasElement;
     if (doughnutEl) {
-      new Chart(doughnutEl, {
+      const chart = new Chart(doughnutEl, {
         type: 'doughnut',
         data: {
           labels: ['Waiting', 'In Queue', 'Completed Today'],
@@ -272,12 +479,13 @@ export class DoctorDashboardComponent implements OnInit {
           plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } } }
         }
       });
+      this.charts.push(chart);
     }
 
     // Today vs Total bar chart
     const barEl = document.getElementById('docBar') as HTMLCanvasElement;
     if (barEl) {
-      new Chart(barEl, {
+      const chart = new Chart(barEl, {
         type: 'bar',
         data: {
           labels: ['Appointments', 'Encounters', 'Consultations'],
@@ -302,6 +510,12 @@ export class DoctorDashboardComponent implements OnInit {
           scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
         }
       });
+      this.charts.push(chart);
     }
+  }
+
+  private destroyCharts(): void {
+    this.charts.forEach(c => c.destroy());
+    this.charts = [];
   }
 }

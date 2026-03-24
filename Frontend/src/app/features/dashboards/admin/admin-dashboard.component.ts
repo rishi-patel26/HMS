@@ -4,17 +4,29 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '@core/services/auth.service';
 import { DashboardService } from '@core/services/dashboard.service';
-import { DashboardStats, DailyTrendResponse, RevenueTrendResponse } from '@core/models/hms.model';
 import {
-  Chart, BarController, LineController,
-  BarElement, LineElement, PointElement,
+  DashboardStats,
+  DailyTrendResponse,
+  RevenueTrendResponse,
+  EncounterStatusDistribution,
+  AppointmentCalendarEvent,
+  DepartmentStats
+} from '@core/models/hms.model';
+import {
+  Chart, BarController, LineController, DoughnutController,
+  BarElement, LineElement, PointElement, ArcElement,
   CategoryScale, LinearScale, Tooltip, Legend, Filler
 } from 'chart.js';
+import { CalendarOptions } from '@fullcalendar/core';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import { FullCalendarModule } from '@fullcalendar/angular';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, FullCalendarModule],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss']
 })
@@ -34,6 +46,26 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   trendLoading = false;
   revenueLoading = false;
 
+  // New chart data
+  encounterStatusData: EncounterStatusDistribution | null = null;
+  departmentStatsData: DepartmentStats | null = null;
+  appointmentEvents: AppointmentCalendarEvent[] = [];
+
+  // FullCalendar configuration
+  calendarOptions: CalendarOptions = {
+    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    events: [],
+    eventClick: this.handleEventClick.bind(this),
+    height: 'auto',
+    eventColor: '#667eea'
+  };
+
   // Chart instances for cleanup
   private charts: Chart[] = [];
 
@@ -45,14 +77,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     Chart.register(
-      BarController, LineController,
-      BarElement, LineElement, PointElement,
+      BarController, LineController, DoughnutController,
+      BarElement, LineElement, PointElement, ArcElement,
       CategoryScale, LinearScale, Tooltip, Legend, Filler
     );
 
     this.username = this.authService.getUsername();
 
-    // Default: last 7 days
+    // Default: last 7 days for trends
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(today.getDate() - 6);
@@ -61,6 +93,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     this.loadStats();
     this.loadTrends();
+    this.loadEnhancedCharts();
+    this.loadAppointmentCalendar();
   }
 
   ngOnDestroy(): void {
@@ -124,6 +158,70 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.destroyChartById('revenueLineChart');
       this.loadTrends();
     }
+  }
+
+  loadEnhancedCharts(): void {
+    // Load encounter status distribution
+    this.dashboardService.getEncounterStatusDistribution().subscribe({
+      next: (data) => {
+        this.encounterStatusData = data;
+        this.cdr.detectChanges();
+        setTimeout(() => this.renderEncounterStatusChart(), 50);
+      },
+      error: () => console.error('Failed to load encounter status data')
+    });
+
+    // Load department stats
+    this.dashboardService.getDepartmentStats().subscribe({
+      next: (data) => {
+        this.departmentStatsData = data;
+        this.cdr.detectChanges();
+        setTimeout(() => this.renderDepartmentChart(), 50);
+      },
+      error: () => console.error('Failed to load department stats')
+    });
+  }
+
+  loadAppointmentCalendar(): void {
+    this.dashboardService.getAllAppointments().subscribe({
+      next: (appointments: any[]) => {
+        this.appointmentEvents = appointments;
+        this.calendarOptions = {
+          ...this.calendarOptions,
+          events: appointments.map((apt: any) => ({
+            id: apt.id.toString(),
+            title: `${apt.patientName} - Dr. ${apt.doctorName}`,
+            start: apt.appointmentTime,
+            backgroundColor: this.getStatusColor(apt.status),
+            borderColor: this.getStatusColor(apt.status),
+            extendedProps: {
+              patientName: apt.patientName,
+              doctorName: apt.doctorName,
+              department: apt.department,
+              status: apt.status
+            }
+          }))
+        };
+        this.cdr.detectChanges();
+      },
+      error: () => console.error('Failed to load all appointments')
+    });
+  }
+
+  handleEventClick(info: any): void {
+    const event = info.event;
+    alert(`Appointment Details:\n\nPatient: ${event.title}\nDoctor: ${event.extendedProps.doctorName}\nStatus: ${event.extendedProps.status}\nTime: ${event.start.toLocaleString()}`);
+  }
+
+  getStatusColor(status: string): string {
+    const colors: Record<string, string> = {
+      'SCHEDULED': '#667eea',
+      'CONFIRMED': '#66BB6A',
+      'COMPLETED': '#42A5F5',
+      'CANCELLED': '#EF5350',
+      'NO_SHOW': '#FFA726'
+    };
+    return colors[status] || '#667eea';
   }
 
   private renderSummaryCharts(): void {
@@ -265,6 +363,88 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             beginAtZero: true,
             grid: { color: 'rgba(0,0,0,0.04)' },
             ticks: { callback: (value) => `INR ${Number(value).toLocaleString('en-IN')}` }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+    this.charts.push(chart);
+  }
+
+  private renderEncounterStatusChart(): void {
+    if (!this.encounterStatusData) return;
+    this.destroyChartById('encounterStatusChart');
+
+    const el = document.getElementById('encounterStatusChart') as HTMLCanvasElement;
+    if (!el) return;
+
+    const chart = new Chart(el, {
+      type: 'doughnut',
+      data: {
+        labels: this.encounterStatusData.labels,
+        datasets: [{
+          data: this.encounterStatusData.data,
+          backgroundColor: ['#667eea', '#66BB6A', '#FFA726', '#EF5350', '#42A5F5'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { font: { size: 11 }, padding: 12, usePointStyle: true }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx: any) => {
+                const total = this.encounterStatusData!.data.reduce((a: number, b: number) => a + b, 0);
+                const percentage = ((ctx.parsed / total) * 100).toFixed(1);
+                return `${ctx.label}: ${ctx.parsed} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+    this.charts.push(chart);
+  }
+
+  private renderDepartmentChart(): void {
+    if (!this.departmentStatsData) return;
+    this.destroyChartById('departmentChart');
+
+    const el = document.getElementById('departmentChart') as HTMLCanvasElement;
+    if (!el) return;
+
+    const chart = new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: this.departmentStatsData.departments,
+        datasets: [{
+          label: 'Appointments',
+          data: this.departmentStatsData.appointmentCounts,
+          backgroundColor: '#667eea',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx: any) => `Appointments: ${ctx.parsed.y}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 },
+            grid: { color: 'rgba(0,0,0,0.04)' }
           },
           x: { grid: { display: false } }
         }

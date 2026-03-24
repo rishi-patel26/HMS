@@ -63,11 +63,30 @@ Hospital Management System (HMS) is a comprehensive full-stack web application d
 - **Language**: TypeScript 5.9
 - **Framework**: Angular 21 (standalone components)
 - **UI Library**: PrimeNG (tables, forms, dialogs)
-- **Charts**: Chart.js with ng2-charts
+- **Charts**: Chart.js 4.5.1 with ng2-charts 8.0.0
+- **Calendar**: FullCalendar 6.x with Angular integration
 - **State Management**: RxJS (reactive programming)
 - **WebSocket Client**: @stomp/stompjs 7.3.0, sockjs-client 1.6.1
 - **HTTP Client**: Angular HttpClient with JWT interceptor
 - **Build Tool**: Angular CLI with Vite
+
+**Chart.js Features**:
+- Line charts for trends and time-series data
+- Bar charts for comparisons and distributions
+- Doughnut charts for proportions and percentages
+- Mixed charts for multi-dataset visualizations
+- Responsive design with professional styling
+- Interactive tooltips and legends
+- Smooth animations
+
+**FullCalendar Features**:
+- Month, week, and day views
+- Drag-and-drop appointment scheduling
+- Color-coded events by status
+- Click events for appointment details
+- Responsive design for mobile
+- Time grid for detailed scheduling
+- Event filtering and search
 
 ### Database
 - **RDBMS**: MySQL 8
@@ -1514,6 +1533,53 @@ Production: https://your-domain.com/api
 }
 ```
 
+#### GET /dashboard/encounter-status-distribution
+**Description**: Get encounter status distribution for charts  
+**Access**: ADMIN, FRONTDESK, DOCTOR, NURSE  
+**Response** (200 OK):
+```json
+{
+  "labels": ["WAITING", "IN CONSULTATION", "COMPLETED", "CANCELLED"],
+  "data": [15, 8, 42, 3],
+  "colors": ["#FFA726", "#42A5F5", "#66BB6A", "#EF5350"]
+}
+```
+
+#### GET /dashboard/appointment-calendar?from={date}&to={date}
+**Description**: Get appointment calendar events  
+**Access**: ADMIN, FRONTDESK, DOCTOR  
+**Query Parameters**:
+- `from`: Start date (YYYY-MM-DD)
+- `to`: End date (YYYY-MM-DD)
+**Response** (200 OK):
+```json
+[
+  {
+    "id": 1,
+    "title": "John Doe - Dr. Smith",
+    "start": "2026-03-25T14:00:00",
+    "end": "2026-03-25T14:30:00",
+    "patientName": "John Doe",
+    "doctorName": "Dr. Smith",
+    "status": "SCHEDULED",
+    "backgroundColor": "#42A5F5",
+    "borderColor": "#42A5F5"
+  }
+]
+```
+
+#### GET /dashboard/department-stats
+**Description**: Get statistics by department  
+**Access**: ADMIN, FRONTDESK  
+**Response** (200 OK):
+```json
+{
+  "departments": ["Cardiology", "Orthopedics", "Pediatrics"],
+  "appointmentCounts": [45, 32, 28],
+  "consultationCounts": [42, 30, 25]
+}
+```
+
 ---
 
 ### Nurse APIs
@@ -2217,6 +2283,307 @@ canActivate(route: ActivatedRouteSnapshot): boolean {
 }
 ```
 
+### 9.6 Dashboard Visualizations
+
+**Chart.js Integration**:
+All dashboards use Chart.js 4.5.1 for professional data visualization:
+
+**Chart Types Used**:
+- **Line Charts**: Daily trends, revenue trends, patient flow
+- **Bar Charts**: Department statistics, appointment counts
+- **Doughnut Charts**: Encounter status distribution, bed occupancy
+- **Mixed Charts**: Combined appointment and consultation trends
+
+**FullCalendar Integration**:
+- **Admin Dashboard**: Full appointment calendar with month/week/day views
+- **Doctor Dashboard**: Personal appointment calendar
+- **Frontdesk Dashboard**: Today's appointment timeline
+- **Features**: Drag-and-drop, color-coded by status, click to view details
+
+**Dashboard-Specific Charts**:
+
+**Admin Dashboard**:
+1. **Daily Trends Line Chart**: Patient registrations, appointments, consultations over 30 days
+2. **Revenue Trend Line Chart**: Daily revenue over 30 days with area fill
+3. **Department Bar Chart**: Appointments by department (Cardiology, Orthopedics, etc.)
+4. **Encounter Status Doughnut**: Distribution of WAITING, IN_CONSULTATION, COMPLETED, CANCELLED
+5. **Full Calendar**: All appointments with color coding by status
+6. **KPI Cards**: Total patients, revenue, appointments, consultations
+
+**Doctor Dashboard**:
+1. **Today's Queue Bar Chart**: Patients by status (Waiting, In Consultation, Completed)
+2. **Weekly Consultation Trend**: Line chart showing consultations over past 7 days
+3. **Patient Priority Doughnut**: Distribution of URGENT, HIGH, NORMAL, LOW priority patients
+4. **Personal Calendar**: Doctor's appointments with patient names
+5. **KPI Cards**: Queue size, completed today, total consultations, active episodes
+
+**Frontdesk Dashboard**:
+1. **Today's Check-ins Line Chart**: Hourly check-in pattern
+2. **Appointment Status Doughnut**: Today's appointments by status
+3. **Revenue Bar Chart**: Today's revenue by payment method (Cash, Card, UPI, Insurance)
+4. **Timeline View**: Today's appointments in chronological order
+5. **KPI Cards**: Today's appointments, waiting patients, pending bills, today's revenue
+
+**Nurse Dashboard**:
+1. **Bed Occupancy Doughnut**: Occupied vs Available beds by type (ICU, General, Private)
+2. **Patient Monitoring Bar Chart**: Patients by doctor
+3. **Priority Requests Line Chart**: Bed requests by priority over time
+4. **Ward Status Grid**: Visual grid showing bed status
+5. **KPI Cards**: Assigned patients, pending requests, critical alerts
+
+**Bed Manager Dashboard**:
+1. **Occupancy Rate Line Chart**: Bed occupancy percentage over 30 days
+2. **Ward Comparison Bar Chart**: Occupancy by ward
+3. **Request Status Doughnut**: Pending, Under Review, Allocated, Rejected
+4. **Monthly Calendar**: Bed allocation timeline
+5. **KPI Cards**: Total beds, occupied, available, pending requests
+
+**Chart Configuration**:
+```typescript
+// Professional chart styling
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        usePointStyle: true,
+        padding: 15,
+        font: { size: 12, family: 'Inter, sans-serif' }
+      }
+    },
+    tooltip: {
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      padding: 12,
+      titleFont: { size: 14, weight: 'bold' },
+      bodyFont: { size: 13 },
+      borderColor: '#ddd',
+      borderWidth: 1
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(0, 0, 0, 0.05)' },
+      ticks: { font: { size: 11 } }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 11 } }
+    }
+  }
+};
+```
+
+**Color Palette**:
+- Primary: #667eea (Purple)
+- Success: #66BB6A (Green)
+- Warning: #FFA726 (Orange)
+- Danger: #EF5350 (Red)
+- Info: #42A5F5 (Blue)
+- Secondary: #9E9E9E (Gray)
+
+### 9.7 Search and Filter Features
+
+**Bed Management Search**
+
+The bed management module includes comprehensive search functionality available to both Nurse and Admin roles:
+
+**Search Capabilities**:
+- Search by bed number (e.g., "B101", "ICU-05")
+- Search by ward name (e.g., "ICU", "General Ward")
+- Case-insensitive partial matching
+- Real-time filtering as you type
+
+**Filter Options**:
+- Ward filter (dropdown of all wards)
+- Bed type filter (GENERAL, ICU, PRIVATE)
+- Status filter (AVAILABLE, OCCUPIED, MAINTENANCE)
+- Combined filters work together for precise results
+
+**UI Features**:
+- Search input with icon and clear button
+- Filter dropdowns with "All" option
+- Results update instantly
+- Pagination preserved during filtering
+- Visual feedback for active filters
+
+**Implementation Details**:
+- Component: `bed-management-workspace.component.ts`
+- Search query variable: `bedSearchQuery`
+- Filter method: `applyBedFilters()`
+- Clear method: `clearSearch()`
+- Filters beds from `allBeds` array to `filteredBeds`
+- Resets to page 1 when filters change
+
+**Access**:
+- Nurse role: Via `/nurse/bed-management` route
+- Admin role: Via bed management workspace
+- Both roles have identical search functionality
+
+**Example Usage**:
+```typescript
+// Search for ICU beds
+bedSearchQuery = 'ICU';
+applyBedFilters(); // Returns all beds with 'ICU' in bed number or ward name
+
+// Filter by status
+selectedStatusFilter = 'AVAILABLE';
+applyBedFilters(); // Returns only available beds
+
+// Combined search and filter
+bedSearchQuery = 'B1';
+selectedWardFilter = '1'; // Ward ID
+selectedTypeFilter = 'GENERAL';
+applyBedFilters(); // Returns general beds in ward 1 with 'B1' in bed number
+```
+
+**Bed Allocation Requests Search**
+
+The "My Bed Allocation Requests" page includes comprehensive search and filter functionality for nurses:
+
+**Search Capabilities**:
+- Search by patient name (e.g., "Het kachhiya", "mihir")
+- Search by patient UHID (e.g., "UHID-00001")
+- Search by encounter number (e.g., "ENC-2026-00001")
+- Case-insensitive partial matching
+- Real-time filtering as you type
+
+**Filter Options**:
+- Status filter: All Status, Requested, Under Review, Allocated, Rejected
+- Priority filter: All Priority, Urgent, High, Normal, Low
+- Bed Type filter: All Bed Types, General, ICU, Private
+- Combined filters work together for precise results
+
+**UI Features**:
+- Search input with icon and clear button
+- Three dropdown filters for status, priority, and bed type
+- Results update instantly as you type or change filters
+- Empty state with "Clear Filters" button when no results match
+- Responsive design for mobile devices
+
+**Implementation Details**:
+- Component: `bed-request.component.ts`
+- Search query variable: `searchQuery`
+- Filter variables: `statusFilter`, `priorityFilter`, `bedTypeFilter`
+- Filter method: `applyFilters()`
+- Clear methods: `clearSearch()`, `clearAllFilters()`
+- Filters requests from `requests` array to `filteredRequests`
+
+**Access**:
+- Nurse role: Via `/nurse/bed-request` route or "Bed Management" menu
+- Displays only requests created by the logged-in nurse
+
+**Example Usage**:
+```typescript
+// Search for patient by name
+searchQuery = 'Het';
+applyFilters(); // Returns all requests for patients with 'Het' in their name
+
+// Filter by status
+statusFilter = 'ALLOCATED';
+applyFilters(); // Returns only allocated requests
+
+// Combined search and filters
+searchQuery = 'ENC-2026';
+statusFilter = 'REQUESTED';
+priorityFilter = 'URGENT';
+bedTypeFilter = 'ICU';
+applyFilters(); // Returns urgent ICU requests with 'ENC-2026' in encounter number
+```
+
+### 9.8 Appointment Calendar
+
+**Doctor Dashboard Calendar**
+
+Each doctor has a personal appointment calendar showing only their appointments:
+
+**Features**:
+- Displays all appointments for the logged-in doctor
+- Three view modes: Month, Week (default), Day
+- Time grid view from 8:00 AM to 8:00 PM
+- Color-coded by appointment status
+- Click event to view full appointment details
+- Real-time "now" indicator
+- No date range filter - shows all appointments
+
+**Calendar Views**:
+- **Month View**: Overview of all appointments in the month
+- **Week View** (Default): Detailed time slots for the week
+- **Day View**: Hour-by-hour schedule for a single day
+
+**Event Display**:
+- Title: Patient name
+- Color: Status-based (Scheduled: Purple, Confirmed: Green, Completed: Blue, Cancelled: Red, No Show: Orange)
+- Click: Shows patient name, UHID, department, status, and time
+
+**API Endpoint**:
+- `GET /api/appointments/doctor/all`
+- Returns all appointments for authenticated doctor
+- Uses JWT authentication to identify doctor
+
+**Admin Dashboard Calendar**
+
+Admin can view all appointments across all doctors:
+
+**Features**:
+- Displays all appointments from all doctors
+- Same three view modes: Month, Week, Day
+- Event title shows: "Patient Name - Dr. Doctor Name"
+- Color-coded by appointment status
+- Click event to view full details
+- No date range filter - shows all appointments
+
+**API Endpoint**:
+- `GET /api/appointments`
+- Returns all appointments in the system
+- Admin-only access
+
+**Status Color Coding**:
+- SCHEDULED: #667eea (Purple)
+- CONFIRMED: #66BB6A (Green)
+- COMPLETED: #42A5F5 (Blue)
+- CANCELLED: #EF5350 (Red)
+- NO_SHOW: #FFA726 (Orange)
+
+### 9.9 Real-Time Notifications
+
+**WebSocket Configuration**
+
+The HMS uses native WebSocket (not SockJS polling) for real-time notifications:
+
+**Connection Details**:
+- Protocol: Native WebSocket (ws://)
+- Endpoint: `ws://localhost:8080/ws`
+- Authentication: JWT token in connect headers
+- Fallback: SockJS available at `/ws` with SockJS
+- Reconnection: Automatic with 5-second delay
+- Heartbeat: 4 seconds incoming/outgoing
+
+**Notification Channels**:
+- User-specific: `/user/queue/notifications` (personal notifications)
+- Role-based: `/topic/notifications/{role}` (broadcast to role)
+
+**Features**:
+- Real-time push notifications
+- Browser notifications (with permission)
+- Unread count badge
+- Mark as read functionality
+- Notification panel with dropdown
+- Auto-reconnect on connection loss
+
+**Implementation**:
+- Frontend: `@stomp/stompjs` client
+- Backend: Spring WebSocket with STOMP
+- Security: JWT authentication for WebSocket connections
+- No polling - pure WebSocket connection
+
+**Notification Types**:
+- APPOINTMENT: Appointment-related notifications
+- BED_ALLOCATION: Bed allocation updates
+- GENERAL: General system notifications
+
 ---
 
 ## 10. Setup & Configuration
@@ -2887,7 +3254,281 @@ public class CacheConfig {
 
 ---
 
-## 14. Conclusion
+## 14. Smart Search System
+
+### Overview
+
+The HMS implements a production-ready smart search system that combines multiple search strategies to provide accurate and relevant results even when users make typos or search phonetically. The system is optimized for performance with database-level filtering and in-memory ranking.
+
+### Search Strategies
+
+The smart search system uses a multi-tier approach with the following strategies (in order of priority):
+
+1. **Exact Match** (Score: 100)
+   - Direct match of normalized input
+   - Highest priority and score
+
+2. **Prefix Match** (Score: 95)
+   - Text starts with the search query
+   - Example: "john" matches "John Doe"
+
+3. **Contains Match** (Score: 90)
+   - Text contains the search query anywhere
+   - Example: "doe" matches "John Doe"
+
+4. **Phonetic Match** (Score: 80-85)
+   - Uses Double Metaphone algorithm
+   - Handles pronunciation variations
+   - Example: "jon" matches "John", "zil" matches "Zeel"
+
+5. **Fuzzy Match** (Score: 70-84)
+   - Uses Levenshtein distance algorithm
+   - Handles typos and misspellings
+   - Example: "jhon" matches "John"
+
+### Architecture
+
+#### Components
+
+**1. PhoneticSearchUtil** (`util/PhoneticSearchUtil.java`)
+- Generates phonetic keys using Double Metaphone algorithm
+- Calculates phonetic similarity scores
+- Provides Levenshtein distance calculation
+- Normalizes text for consistent processing
+
+**2. SmartSearchService** (`search/SmartSearchService.java`)
+- Core search service combining all strategies
+- Supports single-field and multi-field search
+- Ranks results by relevance score
+- Optimized with early termination
+
+**3. SearchResult** (`search/SearchResult.java`)
+- Generic wrapper for search results
+- Contains data, score, match type, and matched field
+- Implements Comparable for automatic sorting
+
+**4. SearchConfig** (`config/SearchConfig.java`)
+- Configurable search parameters
+- Thresholds for fuzzy and phonetic matching
+- Enable/disable individual strategies
+- Maximum results limit
+
+### Database Schema
+
+#### Phonetic Fields
+
+**patients table:**
+```sql
+ALTER TABLE patients
+ADD COLUMN first_name_phonetic VARCHAR(10),
+ADD COLUMN last_name_phonetic VARCHAR(10),
+ADD COLUMN full_name_phonetic VARCHAR(20);
+
+CREATE INDEX idx_patients_first_name_phonetic ON patients(first_name_phonetic);
+CREATE INDEX idx_patients_last_name_phonetic ON patients(last_name_phonetic);
+CREATE INDEX idx_patients_full_name_phonetic ON patients(full_name_phonetic);
+```
+
+**users table:**
+```sql
+ALTER TABLE users
+ADD COLUMN username_phonetic VARCHAR(10);
+
+CREATE INDEX idx_users_username_phonetic ON users(username_phonetic);
+```
+
+### Search Flow
+
+```
+1. USER ENTERS SEARCH QUERY
+   ├─→ Query: "zil" (looking for patient "Zeel")
+   │
+2. DATABASE FILTERING (Prevents Full Table Scan)
+   ├─→ LIKE search: firstName/lastName/UHID/phone LIKE '%zil%'
+   ├─→ Phonetic search: Generate phonetic key for "zil" → "SL"
+   ├─→ Find patients with phonetic keys matching "SL"
+   ├─→ Multi-word search: Split query and search each word
+   └─→ Result: Candidate list (e.g., 50 patients)
+   │
+3. IN-MEMORY RANKING (Smart Search Service)
+   ├─→ For each candidate:
+   │   ├─→ Check exact match → Score: 100
+   │   ├─→ Check prefix match → Score: 95
+   │   ├─→ Check contains match → Score: 90
+   │   ├─→ Check phonetic match → Score: 80-85
+   │   └─→ Check fuzzy match → Score: 70-84
+   │
+4. MULTI-FIELD SEARCH
+   ├─→ Search across: UHID, phone, firstName, lastName, fullName
+   ├─→ Keep best match per patient
+   ├─→ Track which field matched
+   │
+5. SORT AND LIMIT
+   ├─→ Sort by score (descending)
+   ├─→ Sort by match type priority (exact > prefix > contains > phonetic > fuzzy)
+   ├─→ Limit to configured max results (default: 50)
+   │
+6. RETURN RESULTS
+   └─→ Patient list with relevance scores
+```
+
+### Configuration
+
+**application.properties:**
+```properties
+# Smart Search Configuration
+hms.search.max-results=50
+hms.search.fuzzy-threshold=70
+hms.search.phonetic-threshold=80
+hms.search.max-levenshtein-distance=3
+hms.search.phonetic-enabled=true
+hms.search.fuzzy-enabled=true
+```
+
+### Usage Example
+
+**PatientService.java:**
+```java
+public List<PatientResponse> searchPatients(String query) {
+    // Step 1: Get candidates from database
+    List<Patient> candidates = getCandidatesFromDatabase(query);
+    
+    // Step 2: Multi-field smart search
+    Map<String, Function<Patient, String>> fieldExtractors = new LinkedHashMap<>();
+    fieldExtractors.put("uhid", Patient::getUhid);
+    fieldExtractors.put("phone", Patient::getPhone);
+    fieldExtractors.put("firstName", Patient::getFirstName);
+    fieldExtractors.put("lastName", Patient::getLastName);
+    fieldExtractors.put("fullName", p -> p.getFirstName() + " " + p.getLastName());
+    
+    List<SearchResult<Patient>> results = smartSearchService.multiFieldSearch(
+        query, candidates, fieldExtractors
+    );
+    
+    // Step 3: Convert to DTOs
+    return results.stream()
+        .map(result -> patientMapper.toResponse(result.getData()))
+        .collect(Collectors.toList());
+}
+```
+
+### Performance Optimizations
+
+1. **Database-Level Filtering**
+   - LIKE queries with indexes
+   - Phonetic key indexes
+   - Prevents full table scans
+
+2. **Early Termination**
+   - Levenshtein distance calculation stops early if threshold exceeded
+   - Reduces unnecessary computation
+
+3. **Result Limiting**
+   - Configurable max results (default: 50)
+   - Prevents memory issues with large datasets
+
+4. **Normalized Input**
+   - Lowercase conversion
+   - Special character removal
+   - Multiple spaces to single space
+   - Consistent comparison
+
+5. **Phonetic Key Caching**
+   - Phonetic keys stored in database
+   - Generated once on create/update
+   - No runtime computation
+
+### Search Examples
+
+| Query | Patient Name | Match Type | Score | Explanation |
+|-------|-------------|------------|-------|-------------|
+| "john" | "John Doe" | EXACT | 100 | Exact match on first name |
+| "joh" | "John Doe" | PREFIX | 95 | First name starts with query |
+| "doe" | "John Doe" | CONTAINS | 90 | Last name contains query |
+| "jon" | "John Doe" | PHONETIC | 85 | Phonetically similar |
+| "jhon" | "John Doe" | FUZZY | 80 | Typo with 1 character difference |
+| "zil" | "Zeel Patel" | PHONETIC | 85 | Phonetic variation |
+| "patel j" | "John Patel" | CONTAINS | 90 | Multi-word search |
+
+### API Integration
+
+**Endpoint:** `GET /api/patients/search?query={query}`
+
+**Request:**
+```http
+GET /api/patients/search?query=zil
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "uhid": "UHID-20260323-0001",
+    "firstName": "Zeel",
+    "lastName": "Patel",
+    "phone": "9876543210",
+    "email": "zeel.patel@example.com"
+  }
+]
+```
+
+### Extensibility
+
+The smart search system is designed to be extensible:
+
+1. **Add New Entities**
+   - Add phonetic fields to entity
+   - Create migration for database columns
+   - Update service to use SmartSearchService
+   - Define field extractors
+
+2. **Custom Search Strategies**
+   - Extend SmartSearchService
+   - Add new match types to SearchResult.SearchMatchType
+   - Implement custom scoring logic
+
+3. **Configuration**
+   - Adjust thresholds in application.properties
+   - Enable/disable strategies per environment
+   - Tune performance parameters
+
+### Dependencies
+
+**Maven (pom.xml):**
+```xml
+<dependency>
+    <groupId>commons-codec</groupId>
+    <artifactId>commons-codec</artifactId>
+    <version>1.16.0</version>
+</dependency>
+```
+
+### Best Practices
+
+1. **Always normalize input** before searching
+2. **Use database filtering first** to reduce candidate set
+3. **Apply ranking in-memory** for flexibility
+4. **Limit results** to prevent performance issues
+5. **Index phonetic fields** for fast lookups
+6. **Update phonetic keys** on entity create/update
+7. **Log search queries** for analytics and debugging
+8. **Monitor performance** and adjust thresholds
+
+### Future Enhancements
+
+- Synonym support (e.g., "Dr." → "Doctor")
+- Abbreviation handling (e.g., "BP" → "Blood Pressure")
+- Multi-language phonetic support
+- Machine learning-based ranking
+- Search analytics and suggestions
+- Autocomplete with smart search
+- Search history and favorites
+
+---
+
+## 15. Conclusion
 
 This Hospital Management System provides a comprehensive solution for managing hospital operations with:
 

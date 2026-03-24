@@ -102,14 +102,6 @@
           </div>
         </div>
 
-        <!-- Summary Chart -->
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>Today vs Total</h3>
-            <div class="chart-wrap"><canvas id="adminBar"></canvas></div>
-          </div>
-        </div>
-
         <!-- Date Range Filter -->
         <h2 class="section-title">Trend Analysis</h2>
         <div class="date-filter-section">
@@ -127,7 +119,17 @@
 
         <!-- Trend Line Charts -->
         <div class="charts-grid">
-          <div class="chart-card chart-card-wide">
+          <div class="chart-card">
+            <h3>Daily Trends</h3>
+            <p class="chart-subtitle">Patient registrations, appointments & consultations</p>
+            <div class="chart-loading" *ngIf="trendLoading">
+              <i class="pi pi-spin pi-spinner"></i> Loading trend data...
+            </div>
+            <div class="chart-wrap chart-wrap-lg" *ngIf="!trendLoading">
+              <canvas id="trendLineChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
             <h3>Revenue Trend</h3>
             <p class="chart-subtitle">Daily revenue from billing</p>
             <div class="chart-loading" *ngIf="revenueLoading">
@@ -137,6 +139,12 @@
               <canvas id="revenueLineChart"></canvas>
             </div>
           </div>
+        </div>
+
+        <!-- Appointment Calendar -->
+        <h2 class="section-title">Appointment Calendar</h2>
+        <div class="calendar-section">
+          <full-calendar [options]="calendarOptions"></full-calendar>
         </div>
 
         <!-- Quick Actions -->

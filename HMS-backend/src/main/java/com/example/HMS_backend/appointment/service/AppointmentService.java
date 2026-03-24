@@ -88,6 +88,12 @@ public class AppointmentService {
         return appointmentMapper.toResponse(appointment);
     }
 
+    public List<AppointmentResponse> getAllAppointments() {
+        return appointmentRepository.findAll().stream()
+                .map(appointmentMapper::toResponse)
+                .toList();
+    }
+
     public List<AppointmentResponse> getAppointmentsByPatient(Long patientId) {
         return appointmentRepository.findByPatientIdOrderByAppointmentTimeDesc(patientId).stream()
                 .map(appointmentMapper::toResponse)
@@ -145,6 +151,17 @@ public class AppointmentService {
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         return appointmentRepository.findByDoctorIdAndAppointmentTimeBetweenOrderByAppointmentTimeAsc(
                 doctor.getId(), startOfDay, endOfDay).stream()
+                .map(appointmentMapper::toResponse)
+                .toList();
+    }
+
+    public List<AppointmentResponse> getDoctorAppointmentsByDateRange(String doctorUsername, LocalDate from, LocalDate to) {
+        User doctor = userRepository.findByUsername(doctorUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorUsername));
+        LocalDateTime startDateTime = from.atStartOfDay();
+        LocalDateTime endDateTime = to.atTime(23, 59, 59);
+        return appointmentRepository.findByDoctorIdAndAppointmentTimeBetweenOrderByAppointmentTimeAsc(
+                doctor.getId(), startDateTime, endDateTime).stream()
                 .map(appointmentMapper::toResponse)
                 .toList();
     }

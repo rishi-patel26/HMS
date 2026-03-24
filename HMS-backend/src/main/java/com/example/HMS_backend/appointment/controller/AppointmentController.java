@@ -22,6 +22,11 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
+    @GetMapping
+    public ResponseEntity<List<AppointmentResponse>> getAllAppointments() {
+        return ResponseEntity.ok(appointmentService.getAllAppointments());
+    }
+
     @PostMapping
     public ResponseEntity<AppointmentResponse> createAppointment(@Valid @RequestBody AppointmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(appointmentService.createAppointment(request));
@@ -69,6 +74,14 @@ public class AppointmentController {
             Authentication authentication,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(appointmentService.getDoctorAppointmentsByDate(authentication.getName(), date));
+    }
+
+    @GetMapping("/doctor/by-date-range")
+    public ResponseEntity<List<AppointmentResponse>> getDoctorAppointmentsByDateRange(
+            Authentication authentication,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(appointmentService.getDoctorAppointmentsByDateRange(authentication.getName(), from, to));
     }
 
     @DeleteMapping("/{id}")

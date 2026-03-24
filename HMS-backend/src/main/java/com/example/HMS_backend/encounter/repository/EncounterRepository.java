@@ -2,6 +2,7 @@ package com.example.HMS_backend.encounter.repository;
 
 import com.example.HMS_backend.encounter.entity.Encounter;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -19,4 +20,7 @@ public interface EncounterRepository extends JpaRepository<Encounter, Long> {
     List<Encounter> findByDoctorIdAndCreatedAtBetweenOrderByCreatedAtDesc(Long doctorId, LocalDateTime start, LocalDateTime end);
 
     List<Encounter> findByDoctorIdOrderByCreatedAtDesc(Long doctorId);
+    
+    @Query("SELECT e.status, COUNT(e) FROM Encounter e GROUP BY e.status")
+    List<Object[]> countByStatus();
 }

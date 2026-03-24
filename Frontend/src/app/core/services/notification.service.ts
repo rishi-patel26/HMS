@@ -4,7 +4,6 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { type Notification } from '../models/hms.model';
 import { environment } from '../../../environments/environment';
 import { Client, IMessage } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
@@ -38,8 +37,11 @@ export class NotificationService {
     const token = this.readCookie('accessToken');
     if (!token) return;
 
+    // Use native WebSocket instead of SockJS to avoid polling
+    const wsUrl = this.wsUrl.replace('/api', '').replace('http', 'ws');
+
     this.stompClient = new Client({
-      webSocketFactory: () => new SockJS(this.wsUrl),
+      brokerURL: `${wsUrl}/ws`,
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
