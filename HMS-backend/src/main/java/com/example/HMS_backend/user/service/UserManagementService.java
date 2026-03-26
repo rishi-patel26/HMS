@@ -7,6 +7,8 @@ import com.example.HMS_backend.notification.enums.NotificationType;
 import com.example.HMS_backend.notification.service.EmailService;
 import com.example.HMS_backend.notification.service.NotificationService;
 import com.example.HMS_backend.repository.UserRepository;
+import com.example.HMS_backend.search.SearchResult;
+import com.example.HMS_backend.search.SmartSearchService;
 import com.example.HMS_backend.security.enums.Role;
 import com.example.HMS_backend.user.dto.UserCreateRequest;
 import com.example.HMS_backend.user.dto.UserResponse;
@@ -16,7 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class UserManagementService {
     private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final SmartSearchService smartSearchService;
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -114,6 +118,30 @@ public class UserManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         user.setEnabled(false);
         userRepository.save(user);
+    }
+
+    public List<UserResponse> searchUsers(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return getAllUsers();
+        }
+
+        List<User> allUsers = userRepository.findAll();
+
+        Map<String, Function<User, String>> fieldExtractors = new LinkedHashMap<>();
+        fieldExtractors.put("username", User::getUsername);
+        fieldExtractors.put("email", User::getEmail);
+        fieldExtractors.put("role", user -> user.getRole().name());
+
+        List<SearchResult<User>> results = smartSearchService.multiFieldSearch(
+                query,
+                allUsers,
+                fieldExtractors
+        );
+
+        return results.stream()
+                .map(SearchResult::getData)
+                .map(this::toResponse)
+                .toList();
     }
 
     private UserResponse toResponse(User user) {

@@ -467,9 +467,11 @@
 }
 
 .btn-check { background: #eff6ff; color: #2563eb; &:hover { background: #dbeafe; } }
+.btn-edit { background: #fef3c7; color: #d97706; &:hover { background: #fde68a; } }
 .btn-cancel { background: #fef2f2; color: #dc2626; &:hover { background: #fee2e2; } }
 .btn-complete { background: #ecfdf5; color: #059669; &:hover { background: #d1fae5; } }
 .btn-noshow { background: #f8fafc; color: #64748b; &:hover { background: #f1f5f9; } }
+.btn-delete { background: #fee2e2; color: #dc2626; &:hover { background: #fecaca; } }
 
 .uhid-badge {
   font-family: monospace;

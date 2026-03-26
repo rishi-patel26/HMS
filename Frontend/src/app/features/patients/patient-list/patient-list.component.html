@@ -94,6 +94,11 @@
               <button class="btn-action btn-view" (click)="openPatientProfile(patient.id)" title="View Profile">
                 <i class="pi pi-eye"></i>
               </button>
+              @if (userRole === 'ADMIN' || userRole === 'FRONTDESK') {
+              <button class="btn-action btn-edit" (click)="editPatient(patient.id)" title="Edit Patient">
+                <i class="pi pi-pencil"></i>
+              </button>
+              }
               @if (userRole !== 'DOCTOR') {
 
               @if(userRole !== 'NURSE') {

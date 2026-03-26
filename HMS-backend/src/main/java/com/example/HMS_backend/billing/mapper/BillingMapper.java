@@ -2,8 +2,10 @@ package com.example.HMS_backend.billing.mapper;
 
 import com.example.HMS_backend.billing.dto.BillItemResponse;
 import com.example.HMS_backend.billing.dto.BillResponse;
+import com.example.HMS_backend.billing.dto.PaymentResponse;
 import com.example.HMS_backend.billing.entity.Bill;
 import com.example.HMS_backend.billing.entity.BillItem;
+import com.example.HMS_backend.billing.entity.Payment;
 import com.example.HMS_backend.encounter.repository.EncounterRepository;
 import com.example.HMS_backend.patient.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,10 @@ public class BillingMapper {
                 .map(this::toItemResponse)
                 .toList();
 
+        List<PaymentResponse> paymentResponses = bill.getPayments().stream()
+                .map(this::toPaymentResponse)
+                .toList();
+
         BillResponse.BillResponseBuilder builder = BillResponse.builder()
                 .id(bill.getId())
                 .billNumber(bill.getBillNumber())
@@ -32,6 +38,7 @@ public class BillingMapper {
                 .paymentStatus(bill.getPaymentStatus())
                 .paymentMethod(bill.getPaymentMethod())
                 .items(itemResponses)
+                .payments(paymentResponses)
                 .createdAt(bill.getCreatedAt());
 
         // Resolve patient name via encounter -> patient
@@ -56,6 +63,16 @@ public class BillingMapper {
                 .price(item.getPrice())
                 .quantity(item.getQuantity())
                 .subtotal(item.getSubtotal())
+                .build();
+    }
+
+    public PaymentResponse toPaymentResponse(Payment payment) {
+        return PaymentResponse.builder()
+                .id(payment.getId())
+                .amount(payment.getAmount())
+                .paymentMethod(payment.getPaymentMethod())
+                .transactionReference(payment.getTransactionReference())
+                .createdAt(payment.getCreatedAt())
                 .build();
     }
 }

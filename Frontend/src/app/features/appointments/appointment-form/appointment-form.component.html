@@ -3,8 +3,15 @@
     <button class="btn-back" (click)="goBack()">
       <i class="pi pi-arrow-left"></i>
     </button>
-    <h1>Book Appointment</h1>
+    <h1>{{ isEditMode ? 'Edit Appointment' : 'Book Appointment' }}</h1>
   </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading appointment details...</p>
+    </div>
+  }
 
   @if (errorMessage) {
     <div class="error-banner">
@@ -13,7 +20,7 @@
     </div>
   }
 
-  @if (initialized) {
+  @if (initialized && !loading) {
   <div class="form-card">
     <form [formGroup]="appointmentForm" (ngSubmit)="onSubmit()">
 
@@ -112,9 +119,9 @@
         <button type="button" class="btn-secondary" (click)="goBack()">Cancel</button>
         <button type="submit" class="btn-primary" [disabled]="submitting">
           @if (submitting) {
-            <i class="pi pi-spin pi-spinner"></i> Booking...
+            <i class="pi pi-spin pi-spinner"></i> {{ isEditMode ? 'Updating...' : 'Booking...' }}
           } @else {
-            <i class="pi pi-calendar-plus"></i> Book Appointment
+            <i class="pi pi-calendar-plus"></i> {{ isEditMode ? 'Update Appointment' : 'Book Appointment' }}
           }
         </button>
       </div>

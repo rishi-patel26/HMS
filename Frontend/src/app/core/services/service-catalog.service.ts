@@ -25,4 +25,10 @@ export class ServiceCatalogService {
   disableService(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  searchServices(query: string): Observable<ServiceCatalogItem[]> {
+    return this.http.get<ServiceCatalogItem[]>(`${this.apiUrl}/search`, {
+      params: { query }
+    });
+  }
 }

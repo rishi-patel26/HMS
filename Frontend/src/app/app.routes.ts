@@ -102,12 +102,22 @@ export const routes: Routes = [
         component: PatientFormComponent,
         canActivate: [roleGuard([Role.FRONTDESK, Role.ADMIN])]
       },
+      {
+        path: 'patients/edit/:id',
+        component: PatientFormComponent,
+        canActivate: [roleGuard([Role.FRONTDESK, Role.ADMIN])]
+      },
       { path: 'patients/:id', component: PatientProfileComponent },
 
       // Appointment routes
       { path: 'appointments', component: AppointmentListComponent },
       {
         path: 'appointments/new',
+        component: AppointmentFormComponent,
+        canActivate: [roleGuard([Role.FRONTDESK, Role.ADMIN])]
+      },
+      {
+        path: 'appointments/edit/:id',
         component: AppointmentFormComponent,
         canActivate: [roleGuard([Role.FRONTDESK, Role.ADMIN])]
       },

@@ -170,14 +170,14 @@ export class ConsultationComponent implements OnInit, OnDestroy {
           .pipe(takeUntil(this.destroy$)).subscribe({
           next: (consultation) => {
             this.existingConsultation = consultation;
-            this.consultationForm.patchValue({
-              symptoms: consultation.symptoms,
-              diagnosis: consultation.diagnosis,
-              prescription: consultation.prescription,
-              doctorNotes: consultation.doctorNotes,
-              followupDate: consultation.followupDate,
-              testsRequested: consultation.testsRequested
-            });
+            // this.consultationForm.patchValue({
+            //   symptoms: consultation.symptoms,
+            //   diagnosis: consultation.diagnosis,
+            //   prescription: consultation.prescription,
+            //   doctorNotes: consultation.doctorNotes,
+            //   followupDate: consultation.followupDate,
+            //   testsRequested: consultation.testsRequested
+            // });
             this.cdr.detectChanges();
           },
           error: () => {
@@ -216,6 +216,7 @@ export class ConsultationComponent implements OnInit, OnDestroy {
           detail: isUpdate ? 'Consultation updated' : 'Consultation saved'
         });
         this.cdr.detectChanges();
+        this.consultationForm.reset();
       },
       error: () => {
         this.saving = false;

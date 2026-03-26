@@ -428,6 +428,12 @@
     &:hover { background: #e0defa; }
   }
 
+  &.btn-edit {
+    background: #fef3c7;
+    color: #d97706;
+    &:hover { background: #fde68a; }
+  }
+
   &.btn-appt {
     background: #fef9ee;
     color: #d97706;
@@ -438,6 +444,12 @@
     background: #ecfdf5;
     color: #059669;
     &:hover { background: #d1fae5; }
+  }
+
+  &.btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+    &:hover { background: #fecaca; }
   }
 }
 

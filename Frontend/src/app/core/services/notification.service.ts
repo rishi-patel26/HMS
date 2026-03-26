@@ -37,7 +37,6 @@ export class NotificationService {
     const token = this.readCookie('accessToken');
     if (!token) return;
 
-    // Use native WebSocket instead of SockJS to avoid polling
     const wsUrl = this.wsUrl.replace('/api', '').replace('http', 'ws');
 
     this.stompClient = new Client({
@@ -71,21 +70,33 @@ export class NotificationService {
     const username = this.authService.getUsername();
     const role = this.authService.getUserRole();
 
-    // Subscribe to user-specific notifications
-    this.stompClient.subscribe(`/user/queue/notifications`, (message: IMessage) => {
+    console.log(`Subscribing to notification channels for user: ${username}, role: ${role}`);
+
+    // Subscribe to user-specific notification channel
+    // This channel receives notifications targeted specifically to this user
+    const userChannel = `/user/queue/notifications`;
+    this.stompClient.subscribe(userChannel, (message: IMessage) => {
+      console.log(`Received notification on user channel: ${userChannel}`);
       this.handleIncomingNotification(message);
     });
+    console.log(`Subscribed to user-specific channel: ${userChannel}`);
 
-    // Subscribe to role-based notifications
+    // Subscribe to role-based notification channel
+    // This channel receives notifications targeted to all users with this role
     if (role) {
-      this.stompClient.subscribe(`/topic/notifications/${role}`, (message: IMessage) => {
+      const roleChannel = `/topic/notifications/${role}`;
+      this.stompClient.subscribe(roleChannel, (message: IMessage) => {
+        console.log(`Received notification on role channel: ${roleChannel}`);
         this.handleIncomingNotification(message);
       });
+      console.log(`Subscribed to role-based channel: ${roleChannel}`);
     }
   }
 
   private handleIncomingNotification(message: IMessage): void {
     const notification: Notification = JSON.parse(message.body);
+    console.log('Processing incoming notification:', notification);
+    
     const current = this.notificationsSubject.value;
     this.notificationsSubject.next([notification, ...current]);
     this.unreadCountSubject.next(this.unreadCountSubject.value + 1);

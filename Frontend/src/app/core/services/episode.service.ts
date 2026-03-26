@@ -29,6 +29,10 @@ export class EpisodeService {
     return this.http.get<Episode[]>(`${this.apiUrl}/patient/${patientId}`);
   }
 
+  getEpisodeById(id: number): Observable<Episode> {
+    return this.http.get<Episode>(`${this.apiUrl}/${id}`);
+  }
+
   closeEpisode(id: number): Observable<Episode> {
     return this.http.put<Episode>(`${this.apiUrl}/${id}/close`, {});
   }

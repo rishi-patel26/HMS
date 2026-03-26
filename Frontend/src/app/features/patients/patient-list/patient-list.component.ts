@@ -134,6 +134,10 @@ export class PatientListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/patients/new']);
   }
 
+  editPatient(patientId: number): void {
+    this.router.navigate(['/patients/edit', patientId]);
+  }
+
   deletePatient(patient: any): void {
     if (!confirm(`Delete patient ${patient.firstName} ${patient.lastName} (${patient.uhid})?`)) return;
     this.patientService.deletePatient(patient.id).subscribe({

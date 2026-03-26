@@ -58,6 +58,12 @@ public class EpisodeService {
                 .toList();
     }
 
+    public EpisodeResponse getEpisodeById(Long id) {
+        Episode episode = episodeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Episode not found with id: " + id));
+        return episodeMapper.toResponse(episode);
+    }
+
     public List<EpisodeResponse> getDoctorEpisodes(String doctorUsername) {
         User doctor = userRepository.findByUsername(doctorUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorUsername));

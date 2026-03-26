@@ -55,4 +55,8 @@ export class EncounterService {
       params: { date }
     });
   }
+
+  getEncountersByEpisode(episodeId: number): Observable<Encounter[]> {
+    return this.http.get<Encounter[]>(`${this.apiUrl}/episode/${episodeId}`);
+  }
 }

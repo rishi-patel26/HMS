@@ -48,6 +48,13 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.updateAppointmentStatus(id, status));
     }
 
+    @PutMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'FRONTDESK')")
+    public ResponseEntity<AppointmentResponse> updateAppointment(@PathVariable Long id,
+                                                                 @Valid @RequestBody AppointmentRequest request) {
+        return ResponseEntity.ok(appointmentService.updateAppointment(id, request));
+    }
+
     @GetMapping("/today")
     public ResponseEntity<List<AppointmentResponse>> getTodayAppointments() {
         return ResponseEntity.ok(appointmentService.getTodayAppointments());

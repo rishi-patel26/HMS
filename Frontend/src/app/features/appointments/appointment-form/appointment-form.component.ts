@@ -22,6 +22,9 @@ export class AppointmentFormComponent implements OnInit {
   submitting = false;
   errorMessage = '';
   initialized = false;
+  isEditMode = false;
+  appointmentId: number | null = null;
+  loading = false;
 
   patientSearchQuery = '';
   patientResults: Patient[] = [];
@@ -47,7 +50,8 @@ export class AppointmentFormComponent implements OnInit {
       patientId: [null, Validators.required],
       doctorId: [null, Validators.required],
       appointmentTime: ['', Validators.required],
-      reasonForVisit: ['', [Validators.required, Validators.minLength(10)]]
+      reasonForVisit: ['', [Validators.required, Validators.minLength(10)]],
+      notes: ['']
     });
 
     this.loadingDoctors = true;
@@ -60,23 +64,75 @@ export class AppointmentFormComponent implements OnInit {
       error: () => { this.loadingDoctors = false; this.cdr.detectChanges(); }
     });
 
-    const patientId = this.route.snapshot.queryParamMap.get('patientId');
-    if (patientId) {
-      this.patientService.getPatientById(Number(patientId)).subscribe({
-        next: (patient: Patient) => {
-          this.selectedPatient = patient;
-          this.appointmentForm.patchValue({ patientId: patient.id });
+    // Check if we're in edit mode
+    this.route.params.subscribe(params => {
+      if (params['id']) {
+        this.isEditMode = true;
+        this.appointmentId = +params['id'];
+        this.loadAppointment(this.appointmentId);
+      } else {
+        // Check for patientId query param (for new appointments)
+        const patientId = this.route.snapshot.queryParamMap.get('patientId');
+        if (patientId) {
+          this.patientService.getPatientById(Number(patientId)).subscribe({
+            next: (patient: Patient) => {
+              this.selectedPatient = patient;
+              this.appointmentForm.patchValue({ patientId: patient.id });
+              this.initialized = true;
+              this.cdr.detectChanges();
+            },
+            error: () => {
+              this.initialized = true;
+              this.cdr.detectChanges();
+            }
+          });
+        } else {
           this.initialized = true;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.initialized = true;
-          this.cdr.detectChanges();
         }
-      });
-    } else {
-      this.initialized = true;
-    }
+      }
+    });
+  }
+
+  loadAppointment(id: number): void {
+    this.loading = true;
+    this.appointmentService.getAppointmentById(id).subscribe({
+      next: (appointment) => {
+        // Load patient details
+        this.patientService.getPatientById(appointment.patientId).subscribe({
+          next: (patient: Patient) => {
+            this.selectedPatient = patient;
+            
+            // Format datetime for input
+            const appointmentDate = new Date(appointment.appointmentTime);
+            const formattedDateTime = appointmentDate.toISOString().slice(0, 16);
+            
+            this.appointmentForm.patchValue({
+              patientId: appointment.patientId,
+              doctorId: appointment.doctorId,
+              appointmentTime: formattedDateTime,
+              reasonForVisit: appointment.reasonForVisit,
+              notes: appointment.notes
+            });
+            
+            this.loading = false;
+            this.initialized = true;
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.loading = false;
+            this.initialized = true;
+            this.errorMessage = 'Failed to load patient details';
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => {
+        this.loading = false;
+        this.initialized = true;
+        this.errorMessage = 'Failed to load appointment details';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   searchPatient(): void {
@@ -123,19 +179,37 @@ export class AppointmentFormComponent implements OnInit {
     this.submitting = true;
     this.errorMessage = '';
 
-    this.appointmentService.createAppointment(this.appointmentForm.value).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.dataRefresh.triggerRefresh('appointments');
-        this.dataRefresh.triggerRefresh('dashboard');
-        this.router.navigate(['/appointments']);
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.submitting = false;
-        this.errorMessage = err.error?.message || 'Failed to book appointment';
-        this.cdr.detectChanges();
-      }
-    });
+    const request = this.appointmentForm.value;
+
+    if (this.isEditMode && this.appointmentId) {
+      this.appointmentService.updateAppointment(this.appointmentId, request).subscribe({
+        next: () => {
+          this.submitting = false;
+          this.dataRefresh.triggerRefresh('appointments');
+          this.dataRefresh.triggerRefresh('dashboard');
+          this.router.navigate(['/appointments']);
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.submitting = false;
+          this.errorMessage = err.error?.message || 'Failed to update appointment';
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      this.appointmentService.createAppointment(request).subscribe({
+        next: () => {
+          this.submitting = false;
+          this.dataRefresh.triggerRefresh('appointments');
+          this.dataRefresh.triggerRefresh('dashboard');
+          this.router.navigate(['/appointments']);
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.submitting = false;
+          this.errorMessage = err.error?.message || 'Failed to book appointment';
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
 
   goBack(): void {

@@ -44,6 +44,12 @@ public class EpisodeController {
         return ResponseEntity.ok(episodeService.getEpisodesByPatient(patientId));
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN','FRONTDESK')")
+    public ResponseEntity<EpisodeResponse> getEpisodeById(@PathVariable Long id) {
+        return ResponseEntity.ok(episodeService.getEpisodeById(id));
+    }
+
     @PutMapping("/{id}/close")
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<EpisodeResponse> closeEpisode(@PathVariable Long id) {

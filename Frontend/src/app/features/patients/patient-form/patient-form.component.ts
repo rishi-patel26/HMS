@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { PatientService } from '../../../core/services/patient.service';
 import { DataRefreshService } from '../../../core/services/data-refresh.service';
 import { Patient } from '../../../core/models/hms.model';
@@ -17,12 +17,17 @@ export class PatientFormComponent implements OnInit {
   patientForm!: FormGroup;
   submitting = false;
   errorMessage = '';
+  isEditMode = false;
+  patientId: number | null = null;
+  loading = false;
 
   constructor(
     private fb: FormBuilder,
     private patientService: PatientService,
     private dataRefresh: DataRefreshService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    private cdr :ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -37,6 +42,40 @@ export class PatientFormComponent implements OnInit {
       bloodGroup: [''],
       emergencyContact: ['', Validators.pattern('^[0-9]{10}$')]
     });
+
+    // Check if we're in edit mode
+    this.route.params.subscribe(params => {
+      if (params['id']) {
+        this.isEditMode = true;
+        this.patientId = +params['id'];
+        this.loadPatient(this.patientId);
+      }
+    });
+  }
+
+  loadPatient(id: number): void {
+    this.loading = true;
+    this.patientService.getPatientById(id).subscribe({
+      next: (patient: Patient) => {
+        this.patientForm.patchValue({
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          gender: patient.gender,
+          dob: patient.dob,
+          phone: patient.phone,
+          email: patient.email,
+          address: patient.address,
+          bloodGroup: patient.bloodGroup,
+          emergencyContact: patient.emergencyContact
+        });
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'Failed to load patient details';
+      }
+    });
   }
 
   onSubmit(): void {
@@ -48,22 +87,43 @@ export class PatientFormComponent implements OnInit {
     this.submitting = true;
     this.errorMessage = '';
 
-    this.patientService.createPatient(this.patientForm.value).subscribe({
-      next: (patient: Patient) => {
-        this.submitting = false;
-        this.dataRefresh.triggerRefresh('patients');
-        this.dataRefresh.triggerRefresh('dashboard');
-        this.router.navigate(['/patients', patient.id]);
-      },
-      error: (err: { status?: number; error?: { message?: string } }) => {
-        this.submitting = false;
-        if (err.status === 409) {
-          this.errorMessage = err.error?.message || 'A patient with this phone number already exists';
-        } else {
-          this.errorMessage = err.error?.message || 'Failed to register patient';
+    const request = this.patientForm.value;
+
+    if (this.isEditMode && this.patientId) {
+      this.patientService.updatePatient(this.patientId, request).subscribe({
+        next: (patient: Patient) => {
+          this.submitting = false;
+          this.dataRefresh.triggerRefresh('patients');
+          this.dataRefresh.triggerRefresh('dashboard');
+          this.router.navigate(['/patients', patient.id]);
+        },
+        error: (err: { status?: number; error?: { message?: string } }) => {
+          this.submitting = false;
+          if (err.status === 409) {
+            this.errorMessage = err.error?.message || 'A patient with this phone number already exists';
+          } else {
+            this.errorMessage = err.error?.message || 'Failed to update patient';
+          }
         }
-      }
-    });
+      });
+    } else {
+      this.patientService.createPatient(request).subscribe({
+        next: (patient: Patient) => {
+          this.submitting = false;
+          this.dataRefresh.triggerRefresh('patients');
+          this.dataRefresh.triggerRefresh('dashboard');
+          this.router.navigate(['/patients', patient.id]);
+        },
+        error: (err: { status?: number; error?: { message?: string } }) => {
+          this.submitting = false;
+          if (err.status === 409) {
+            this.errorMessage = err.error?.message || 'A patient with this phone number already exists';
+          } else {
+            this.errorMessage = err.error?.message || 'Failed to register patient';
+          }
+        }
+      });
+    }
   }
 
   goBack(): void {

@@ -4,11 +4,12 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { EncounterService } from '../../../core/services/encounter.service';
+import { EpisodeService } from '../../../core/services/episode.service';
 import { PatientService } from '../../../core/services/patient.service';
 import { UserService } from '../../../core/services/user.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { DataRefreshService } from '../../../core/services/data-refresh.service';
-import { Patient, Encounter, EncounterRequest, Appointment, Consultation, Bill } from '../../../core/models/hms.model';
+import { Patient, Encounter, EncounterRequest, Appointment, Consultation, Bill, Episode } from '../../../core/models/hms.model';
 import { User } from '../../../core/models/auth.model';
 import { ConsultationService } from '../../../core/services/consultation.service';
 import { BillingService } from '../../../core/services/billing.service';
@@ -40,10 +41,12 @@ export class EncounterDetailsComponent implements OnInit {
   consultation: Consultation | null = null;
   bill: Bill | null = null;
   appointmentDetails: Appointment | null = null;
+  episodeDetails: Episode | null = null;
 
   constructor(
     private fb: FormBuilder,
     private encounterService: EncounterService,
+    private episodeService: EpisodeService,
     private patientService: PatientService,
     private userService: UserService,
     private appointmentService: AppointmentService,
@@ -124,6 +127,14 @@ export class EncounterDetailsComponent implements OnInit {
             error: () => {}
           });
         }
+
+        if (data.episodeId) {
+          this.episodeService.getEpisodeById(data.episodeId).subscribe({
+            next: (episode) => { this.episodeDetails = episode; this.cdr.detectChanges(); },
+            error: () => {}
+          });
+        }
+
         this.cdr.detectChanges();
       },
       error: () => { this.loading = false; this.cdr.detectChanges(); }
@@ -218,11 +229,5 @@ export class EncounterDetailsComponent implements OnInit {
   isInvalid(field: string): boolean {
     const control = this.checkinForm?.get(field);
     return !!control && control.invalid && control.touched;
-  }
-
-  createBill(): void {
-    if (this.encounter) {
-      this.router.navigate(['/billing/create'], { queryParams: { encounterId: this.encounter.id } });
-    }
   }
 }

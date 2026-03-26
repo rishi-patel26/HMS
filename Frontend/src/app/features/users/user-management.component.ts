@@ -20,11 +20,13 @@ import {
 })
 export class UserManagementComponent implements OnInit {
   users: UserResponse[] = [];
+  allUsers: UserResponse[] = [];
   userForm!: FormGroup;
   showForm = false;
   editingId: number | null = null;
   saving = false;
   loading = true;
+  searchQuery = '';
 
   roles = [
     { value: 'ADMIN', label: 'Admin' },
@@ -59,6 +61,7 @@ export class UserManagementComponent implements OnInit {
     this.loading = true;
     this.userService.getAllUsers().subscribe({
       next: (users) => {
+        this.allUsers = users;
         this.users = users;
         this.loading = false;
         this.cdr.detectChanges();
@@ -73,6 +76,36 @@ export class UserManagementComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  searchUsers(): void {
+    if (!this.searchQuery.trim()) {
+      this.users = this.allUsers;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.loading = true;
+    this.userService.searchUsers(this.searchQuery).subscribe({
+      next: (users) => {
+        this.users = users;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading = false;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to search users'
+        });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  onSearchInput(): void {
+    this.searchUsers();
   }
 
   toggleForm(): void {

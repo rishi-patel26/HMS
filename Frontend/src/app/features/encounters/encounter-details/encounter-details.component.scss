@@ -333,14 +333,6 @@
     }
   }
 
-  .detail-actions {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #f1f0fb;
-    display: flex;
-    gap: 0.5rem;
-  }
-
   .status-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
@@ -357,6 +349,36 @@
     &[data-status="PENDING"] { background: #fef9ee; color: #d97706; }
     &[data-status="PARTIAL"] { background: #fff7ed; color: #ea580c; }
     &[data-status="PAID"] { background: #ecfdf5; color: #059669; }
+    &[data-status="ACTIVE"] { background: #ecfdf5; color: #059669; }
+    &[data-status="CLOSED"] { background: #f1f5f9; color: #64748b; }
+  }
+
+  .episode-type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    &[data-type="ACUTE"] { background: #fef2f2; color: #dc2626; }
+    &[data-type="CHRONIC"] { background: #f5f3ff; color: #7c3aed; }
+    &[data-type="FOLLOW_UP"] { background: #eff6ff; color: #2563eb; }
+    &[data-type="EMERGENCY"] { background: #fff7ed; color: #ea580c; }
+    &[data-type="PREVENTIVE"] { background: #ecfdf5; color: #059669; }
+  }
+
+  .severity-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    &[data-severity="MILD"] { background: #f0fdf4; color: #16a34a; }
+    &[data-severity="MODERATE"] { background: #fef9ee; color: #d97706; }
+    &[data-severity="SEVERE"] { background: #fff7ed; color: #ea580c; }
+    &[data-severity="CRITICAL"] { background: #fef2f2; color: #dc2626; }
   }
 
   .loading-state {

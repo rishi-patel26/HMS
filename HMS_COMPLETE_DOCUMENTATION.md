@@ -1936,73 +1936,197 @@ BED REQUEST MANAGEMENT:
 
 ## 8. Real-Time Features
 
-### 8.1 WebSocket STOMP Notifications
+### 8.1 WebSocket STOMP Notification System
 
-**Architecture**:
+**Architecture Overview**:
 ```
 Frontend (Angular)
-    ↕ WebSocket STOMP over SockJS
+    ↕ WebSocket STOMP (Native WebSocket + SockJS fallback)
 Backend (Spring Boot)
     ↓
 SimpMessagingTemplate
-    ├─→ /user/{username}/queue/notifications (user-specific)
-    └─→ /topic/notifications/{role} (role-based broadcast)
+    ├─→ /user/{username}/queue/notifications (user-specific channel)
+    └─→ /topic/notifications/{role} (role-based broadcast channel)
 ```
 
 **Connection Flow**:
 ```
-1. User logs in
-2. Frontend reads JWT token from cookie
-3. Establishes WebSocket connection to /ws
-4. Sends CONNECT frame with Authorization header
-5. Backend validates JWT token
-6. Sets user principal
-7. Connection established
-8. Frontend subscribes to channels:
-   - /user/queue/notifications (personal)
-   - /topic/notifications/{role} (role-based)
+1. User logs in → JWT token stored in cookie
+2. NotificationService initializes WebSocket connection
+3. Connects to ws://localhost:8080/ws
+4. Sends CONNECT frame with Authorization: Bearer <token>
+5. Backend JwtAuthenticationFilter validates token
+6. User principal set in WebSocket session
+7. Connection established successfully
+8. Frontend subscribes to notification channels:
+   - /user/queue/notifications (personal messages)
+   - /topic/notifications/{role} (role-based broadcasts)
 9. Ready to receive real-time notifications
+10. Auto-reconnection on connection loss (5s delay)
 ```
 
-**Notification Channels**:
+**Notification Channel Architecture**:
 
-**User-Specific** (`/user/{username}/queue/notifications`):
+**1. User-Specific Channels** (`/user/{username}/queue/notifications`):
+- Each user has a dedicated private channel
+- Only the specific user receives these notifications
+- Backend uses: `messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notification)`
+- Frontend subscribes: `stompClient.subscribe("/user/queue/notifications", handler)`
+
+**Use Cases**:
 - Welcome message on account creation
-- Appointment confirmations
-- Consultation completed
-- Bill generated
-- Bed allocated
-- Personal alerts
+- Appointment confirmations (sent ONLY to the booked doctor)
+- Consultation completed notifications
+- Bill generated for specific patient
+- Bed allocated to specific nurse's request
+- Personal alerts and reminders
 
-**Role-Based** (`/topic/notifications/{role}`):
-- DOCTOR: New patient in queue, urgent consultations
-- NURSE: Bed allocation updates, patient alerts
-- FRONTDESK: New appointments, check-ins
-- BED_MANAGER: New bed requests, occupancy alerts
-- ADMIN: System-wide notifications
+**2. Role-Based Channels** (`/topic/notifications/{role}`):
+- Broadcast to all users with a specific role
+- Multiple users can receive the same notification
+- Backend uses: `messagingTemplate.convertAndSend("/topic/notifications/" + role, notification)`
+- Frontend subscribes: `stompClient.subscribe("/topic/notifications/DOCTOR", handler)`
+
+**Use Cases**:
+- DOCTOR: System-wide announcements for all doctors
+- NURSE: General nursing alerts
+- FRONTDESK: New patient registrations, system updates
+- BED_MANAGER: Ward capacity alerts
+- ADMIN: System maintenance notifications
+
+**Notification Flow Example - Appointment Booking**:
+```
+1. Frontdesk books appointment for Patient A with Doctor B
+2. AppointmentService.createAppointment() called
+3. Appointment saved to database
+4. NotificationService.notifyUser() called with:
+   - message: "New appointment booked for you at 2:00 PM with patient John Doe"
+   - type: APPOINTMENT
+   - username: "doctor.b" (ONLY the booked doctor)
+5. Backend sends to: /user/doctor.b/queue/notifications
+6. Doctor B's frontend receives notification (if connected)
+7. Notification appears in Doctor B's notification panel
+8. Browser notification shown (if permitted)
+9. Notification stored in database for persistence
+```
 
 **Notification Types**:
-- GENERAL: System messages
-- APPOINTMENT: Appointment related
-- ENCOUNTER: Check-in, status updates
-- CONSULTATION: Consultation completed
-- EPISODE: Episode created/updated
-- BILLING: Bill generated, payment received
-- BED_ALLOCATION: Bed requests, allocations
-- NURSE_ALERT: Critical patient alerts
+- `GENERAL`: System messages, announcements
+- `APPOINTMENT`: Appointment bookings, cancellations, reminders
+- `ENCOUNTER`: Patient check-ins, status updates
+- `CONSULTATION`: Consultation completed, follow-ups
+- `EPISODE`: Episode created, updated, closed
+- `BILLING`: Bill generated, payment received
+- `BED_ALLOCATION`: Bed requests, allocations, discharges
+- `NURSE_ALERT`: Critical patient alerts, vital signs
 
-**Auto-Reconnection**:
-- Detects connection loss
-- Waits 5 seconds
-- Attempts reconnection
-- Re-subscribes to channels
-- Resumes normal operation
+**Key Features**:
 
-**Browser Notifications**:
+**1. Targeted Notifications**:
+- Appointment notifications sent ONLY to the assigned doctor
+- Bed allocation notifications sent to specific nurse who requested
+- No unnecessary notifications to other users
+
+**2. Persistent Storage**:
+- All notifications stored in database
+- Available even if user was offline
+- Fetched on login via REST API
+
+**3. Auto-Reconnection**:
+- Detects WebSocket connection loss
+- Waits 5 seconds before retry
+- Automatically re-subscribes to channels
+- Seamless recovery without user intervention
+
+**4. Browser Notifications**:
 - Requests permission on first load
 - Shows desktop notification when tab not focused
-- Includes notification message and icon
-- Clicking notification focuses the tab
+- Includes notification message and HMS icon
+- Clicking notification focuses the application tab
+
+**5. Unread Count**:
+- Real-time unread notification counter
+- Updates on new notifications
+- Decrements when marked as read
+- Displayed in navigation bar
+
+**WebSocket Configuration**:
+
+**Backend (WebSocketConfig.java)**:
+```java
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic", "/queue", "/user");
+        config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
+    }
+    
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Native WebSocket
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:4200");
+        
+        // SockJS fallback for older browsers
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:4200")
+                .withSockJS();
+    }
+}
+```
+
+**Frontend (notification.service.ts)**:
+```typescript
+private connect(): void {
+  const token = this.readCookie('accessToken');
+  const wsUrl = 'ws://localhost:8080/ws';
+
+  this.stompClient = new Client({
+    brokerURL: wsUrl,
+    connectHeaders: {
+      Authorization: `Bearer ${token}`
+    },
+    reconnectDelay: 5000,
+    heartbeatIncoming: 4000,
+    heartbeatOutgoing: 4000,
+  });
+
+  this.stompClient.onConnect = () => {
+    this.subscribeToNotifications();
+  };
+
+  this.stompClient.activate();
+}
+
+private subscribeToNotifications(): void {
+  const username = this.authService.getUsername();
+  const role = this.authService.getUserRole();
+
+  // User-specific channel
+  this.stompClient.subscribe('/user/queue/notifications', handler);
+
+  // Role-based channel
+  this.stompClient.subscribe(`/topic/notifications/${role}`, handler);
+}
+```
+
+**Security**:
+- JWT token validated on WebSocket CONNECT
+- User principal set for message routing
+- Only authenticated users can connect
+- User can only receive their own user-specific messages
+- Role-based messages filtered by user's role
+
+**Performance Optimizations**:
+- Heartbeat mechanism prevents connection timeout
+- Efficient message routing with Spring's SimpMessagingTemplate
+- Minimal payload size (JSON)
+- Connection pooling handled by Spring
+- No polling - pure push notifications
 
 ---
 
@@ -3452,7 +3576,7 @@ public List<PatientResponse> searchPatients(String query) {
 
 ### API Integration
 
-**Endpoint:** `GET /api/patients/search?query={query}`
+**Patient Search Endpoint:** `GET /api/patients/search?query={query}`
 
 **Request:**
 ```http
@@ -3472,6 +3596,171 @@ Authorization: Bearer <token>
     "email": "zeel.patel@example.com"
   }
 ]
+```
+
+**User Search Endpoint:** `GET /api/users/search?query={query}`
+
+**Request:**
+```http
+GET /api/users/search?query=john
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "username": "john.doe",
+    "email": "john.doe@hospital.com",
+    "role": "DOCTOR",
+    "enabled": true,
+    "createdAt": "2026-03-20T10:30:00"
+  }
+]
+```
+
+**Service Catalog Search Endpoint:** `GET /api/services/search?query={query}`
+
+**Request:**
+```http
+GET /api/services/search?query=consultation
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "General Consultation",
+    "price": 500.00,
+    "description": "General medical consultation",
+    "category": "CONSULTATION",
+    "active": true
+  }
+]
+```
+
+**Bill Search Endpoint:** `GET /api/bills/search?query={query}`
+
+**Request:**
+```http
+GET /api/bills/search?query=BILL-001
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "billNumber": "BILL-20260323-0001",
+    "patientName": "John Doe",
+    "totalAmount": 1500.00,
+    "status": "PAID"
+  }
+]
+```
+
+**Consultation Search Endpoint:** `GET /api/consultations/search?patientName={query}`
+
+**Request:**
+```http
+GET /api/consultations/search?patientName=john
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "encounterId": 5,
+    "patientName": "John Doe",
+    "doctorName": "Dr. Smith",
+    "diagnosis": "Common cold",
+    "createdAt": "2026-03-23T14:30:00"
+  }
+]
+```
+
+### Entities with Smart Search
+
+The smart search system is implemented across the following entities:
+
+1. **Patients** ✅
+   - Search fields: UHID, phone, firstName, lastName, fullName
+   - Phonetic fields: first_name_phonetic, last_name_phonetic, full_name_phonetic
+   - Endpoint: `GET /api/patients/search?query={query}`
+
+2. **Users** ✅
+   - Search fields: username, email, role
+   - Phonetic fields: username_phonetic
+   - Endpoint: `GET /api/users/search?query={query}`
+
+3. **Service Catalog** ✅
+   - Search fields: name, description, category
+   - Endpoint: `GET /api/services/search?query={query}`
+
+4. **Bills** ✅
+   - Search fields: billNumber, patientName, patientUhid
+   - Endpoint: `GET /api/bills/search?query={query}`
+
+5. **Consultations** ✅
+   - Search fields: patientName, patientUhid, doctorName
+   - Endpoint: `GET /api/consultations/search?patientName={query}`
+
+### Frontend Integration
+
+All search bars across the application use the smart search system:
+
+**User Management Component:**
+```typescript
+searchUsers(): void {
+  if (!this.searchQuery.trim()) {
+    this.users = this.allUsers;
+    return;
+  }
+  
+  this.userService.searchUsers(this.searchQuery).subscribe({
+    next: (users) => {
+      this.users = users;
+    }
+  });
+}
+```
+
+**Service Catalog Component:**
+```typescript
+searchServices(): void {
+  if (!this.searchQuery.trim()) {
+    this.services = this.allServices;
+    return;
+  }
+  
+  this.serviceCatalogService.searchServices(this.searchQuery).subscribe({
+    next: (services) => {
+      this.services = services;
+    }
+  });
+}
+```
+
+**Patient List Component:**
+```typescript
+searchPatients(): void {
+  if (!this.searchQuery.trim()) {
+    this.loadRecentPatients();
+    return;
+  }
+  
+  this.patientService.searchPatients(this.searchQuery).subscribe({
+    next: (patients) => {
+      this.patients = patients;
+    }
+  });
+}
 ```
 
 ### Extensibility

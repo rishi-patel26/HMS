@@ -4,12 +4,15 @@ import com.example.HMS_backend.billing.dto.BillItemRequest;
 import com.example.HMS_backend.billing.dto.BillResponse;
 import com.example.HMS_backend.billing.entity.Bill;
 import com.example.HMS_backend.billing.entity.BillItem;
+import com.example.HMS_backend.billing.entity.Payment;
 import com.example.HMS_backend.billing.enums.PaymentStatus;
 import com.example.HMS_backend.billing.mapper.BillingMapper;
 import com.example.HMS_backend.billing.repository.BillRepository;
 import com.example.HMS_backend.encounter.entity.Encounter;
 import com.example.HMS_backend.encounter.repository.EncounterRepository;
 import com.example.HMS_backend.exception.ResourceNotFoundException;
+import com.example.HMS_backend.search.SearchResult;
+import com.example.HMS_backend.search.SmartSearchService;
 import com.example.HMS_backend.servicecatalog.entity.ServiceCatalog;
 import com.example.HMS_backend.servicecatalog.repository.ServiceCatalogRepository;
 import com.example.HMS_backend.util.BillNumberGenerator;
@@ -20,7 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class BillingService {
     private final EncounterRepository encounterRepository;
     private final BillingMapper billingMapper;
     private final BillNumberGenerator billNumberGenerator;
+    private final SmartSearchService smartSearchService;
 
     @Transactional
     public BillResponse createBill(Long encounterId) {
@@ -84,10 +89,23 @@ public class BillingService {
         Bill bill = billRepository.findById(billId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bill not found with id: " + billId));
 
+        // Create payment record
+        Payment payment = Payment.builder()
+                .bill(bill)
+                .amount(amount)
+                .paymentMethod(paymentMethod)
+                .build();
+        
+        bill.getPayments().add(payment);
+
+        // Update paid amount
         BigDecimal newPaidAmount = bill.getPaidAmount().add(amount);
         bill.setPaidAmount(newPaidAmount);
+        
+        // Update payment method (keep the last one for backward compatibility)
         bill.setPaymentMethod(paymentMethod);
 
+        // Update payment status
         if (newPaidAmount.compareTo(bill.getTotalAmount()) >= 0) {
             bill.setPaymentStatus(PaymentStatus.PAID);
         } else if (newPaidAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -146,22 +164,50 @@ public class BillingService {
     }
 
     public List<BillResponse> searchBills(String billNumber, String status) {
-        return billRepository.findAll().stream()
+        List<Bill> allBills = billRepository.findAll();
+        
+        // Filter by status first if provided
+        List<Bill> filteredBills = allBills.stream()
                 .filter(b -> {
-                    boolean match = true;
-                    if (billNumber != null && !billNumber.isBlank()) {
-                        match = b.getBillNumber().toLowerCase().contains(billNumber.toLowerCase());
-                    }
                     if (status != null && !status.isBlank()) {
-                        match = match && b.getPaymentStatus().name().equalsIgnoreCase(status);
+                        return b.getPaymentStatus().name().equalsIgnoreCase(status);
                     }
-                    return match;
+                    return true;
                 })
-                .sorted((a, b) -> {
-                    if (b.getCreatedAt() == null) return -1;
-                    if (a.getCreatedAt() == null) return 1;
-                    return b.getCreatedAt().compareTo(a.getCreatedAt());
-                })
+                .toList();
+
+        // If no bill number query, return filtered bills
+        if (billNumber == null || billNumber.isBlank()) {
+            return filteredBills.stream()
+                    .sorted((a, b) -> {
+                        if (b.getCreatedAt() == null) return -1;
+                        if (a.getCreatedAt() == null) return 1;
+                        return b.getCreatedAt().compareTo(a.getCreatedAt());
+                    })
+                    .map(billingMapper::toResponse)
+                    .toList();
+        }
+
+        // Apply smart search on bill number and patient name
+        Map<String, Function<Bill, String>> fieldExtractors = new LinkedHashMap<>();
+        fieldExtractors.put("billNumber", Bill::getBillNumber);
+        fieldExtractors.put("patientName", bill -> {
+            BillResponse response = billingMapper.toResponse(bill);
+            return response.getPatientName() != null ? response.getPatientName() : "";
+        });
+        fieldExtractors.put("patientUhid", bill -> {
+            BillResponse response = billingMapper.toResponse(bill);
+            return response.getPatientUhid() != null ? response.getPatientUhid() : "";
+        });
+
+        List<SearchResult<Bill>> results = smartSearchService.multiFieldSearch(
+                billNumber,
+                filteredBills,
+                fieldExtractors
+        );
+
+        return results.stream()
+                .map(SearchResult::getData)
                 .map(billingMapper::toResponse)
                 .toList();
     }

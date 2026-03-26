@@ -33,6 +33,7 @@ public class NurseService {
         private final BedAllocationRequestRepository bedAllocationRequestRepository;
     private final NurseMapper nurseMapper;
 
+
     // Get Doctors
     public List<DoctorOption> getDoctors() {
         return userRepository.findByRole(Role.DOCTOR).stream()
@@ -78,7 +79,7 @@ public class NurseService {
         consultationRepository.findByEncounterId(encounterId)
                 .ifPresent(c -> nurseMapper.mapConsultationDetails(builder, c));
 
-        return builder.build();
+        return builder;
     }
 
     //  Dashboard Stats

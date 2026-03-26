@@ -28,6 +28,10 @@ export class AppointmentService {
     });
   }
 
+  updateAppointment(id: number, request: AppointmentRequest): Observable<Appointment> {
+    return this.http.put<Appointment>(`${this.apiUrl}/${id}`, request);
+  }
+
   getTodayAppointments(): Observable<Appointment[]> {
     return this.http.get<Appointment[]>(`${this.apiUrl}/today`);
   }

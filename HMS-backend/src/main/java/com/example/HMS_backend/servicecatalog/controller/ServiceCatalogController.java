@@ -39,4 +39,11 @@ public class ServiceCatalogController {
         serviceCatalogService.disableService(id);
         return ResponseEntity.noContent().build();
     }
+
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ServiceResponse>> searchServices(@RequestParam String query) {
+        return ResponseEntity.ok(serviceCatalogService.searchServices(query));
+    }
+
 }

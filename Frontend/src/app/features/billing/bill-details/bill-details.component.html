@@ -116,10 +116,35 @@
       </table>
 
       <!-- Payment Info -->
-      @if (bill.paymentMethod) {
-        <div class="payment-info-row">
-          <span class="payment-method-label">Payment Method:</span>
-          <span class="payment-method-value">{{ bill.paymentMethod }}</span>
+      @if (bill.payments && bill.payments.length > 0) {
+        <div class="payment-details-section">
+          <h3>Payment Details</h3>
+          <table class="payment-table">
+            <thead>
+              <tr>
+                <th class="col-no">#</th>
+                <th class="col-date">Date</th>
+                <th class="col-method">Payment Method</th>
+                <th class="col-amount">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (payment of bill.payments; track payment.id; let i = $index) {
+                <tr>
+                  <td class="col-no">{{ i + 1 }}</td>
+                  <td class="col-date">{{ formatDate(payment.createdAt) }}</td>
+                  <td class="col-method">{{ payment.paymentMethod }}</td>
+                  <td class="col-amount">{{ formatCurrency(payment.amount) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="total-payment-row">
+                <td colspan="3" class="total-label"><strong>Total Paid</strong></td>
+                <td><strong>{{ formatCurrency(bill.paidAmount) }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       }
 

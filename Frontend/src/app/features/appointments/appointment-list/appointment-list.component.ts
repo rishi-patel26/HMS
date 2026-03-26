@@ -182,6 +182,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     });
   }
 
+  editAppointment(appointmentId: number): void {
+    this.router.navigate(['/appointments/edit', appointmentId]);
+  }
+
   deleteAppointment(appointment: Appointment): void {
     if (!confirm(`Delete appointment for ${appointment.patientName}?`)) return;
     this.appointmentService.deleteAppointment(appointment.id).subscribe({

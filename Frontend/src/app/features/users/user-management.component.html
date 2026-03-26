@@ -28,6 +28,24 @@
     </div>
   }
 
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-box">
+      <i class="pi pi-search search-icon"></i>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput()"
+        placeholder="Search users by username, email, or role..."
+        class="search-input" />
+      @if (searchQuery) {
+        <button type="button" class="clear-btn" (click)="searchQuery = ''; onSearchInput()">
+          <i class="pi pi-times"></i>
+        </button>
+      }
+    </div>
+  </div>
+
   <!-- Create/Edit Form -->
   @if (showForm) {
     <div class="card form-card">

@@ -10,14 +10,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Production-ready smart search service combining multiple search strategies
- * - Exact match
- * - Prefix match
- * - Contains match
- * - Phonetic match (Double Metaphone)
- * - Fuzzy match (Levenshtein distance)
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,15 +18,6 @@ public class SmartSearchService {
     private final PhoneticSearchUtil phoneticSearchUtil;
     private final SearchConfig searchConfig;
 
-    /**
-     * Perform smart search on a list of candidates
-     * 
-     * @param query Search query
-     * @param candidates List of candidates to search
-     * @param textExtractor Function to extract searchable text from candidate
-     * @param <T> Type of candidate
-     * @return Ranked list of search results
-     */
     public <T> List<SearchResult<T>> search(String query, 
                                              List<T> candidates, 
                                              Function<T, String> textExtractor) {
@@ -81,15 +64,7 @@ public class SmartSearchService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Perform multi-field smart search
-     * 
-     * @param query Search query
-     * @param candidates List of candidates
-     * @param fieldExtractors Map of field names to text extractors
-     * @param <T> Type of candidate
-     * @return Ranked list of search results
-     */
+
     public <T> List<SearchResult<T>> multiFieldSearch(String query,
                                                        List<T> candidates,
                                                        Map<String, Function<T, String>> fieldExtractors) {

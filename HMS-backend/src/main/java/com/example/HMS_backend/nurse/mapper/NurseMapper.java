@@ -43,55 +43,55 @@ public class NurseMapper {
         return builder.build();
     }
 
-    // 🔹 Base Encounter → PatientCaseTimeline
-    public PatientCaseTimeline.PatientCaseTimelineBuilder toPatientCaseBase(Encounter encounter) {
+    // 🔹 Base Encounter → PatientCaseTimelineBuilder
+    public PatientCaseTimeline toPatientCaseBase(Encounter encounter) {
         return PatientCaseTimeline.builder()
                 .encounterId(encounter.getId())
                 .encounterNumber(encounter.getEncounterNumber())
-                .encounterStatus(encounter.getStatus())
-                .visitType(encounter.getVisitType())
-                .priority(encounter.getPriority())
-                .visitDate(encounter.getVisitDate())
-                .checkinTime(encounter.getCheckinTime())
+                .encounterStatus(encounter.getStatus() != null ? encounter.getStatus().toString() : null)
+                .visitType(encounter.getVisitType() != null ? encounter.getVisitType().toString() : null)
+                .priority(encounter.getPriority() != null ? encounter.getPriority().toString() : null)
+                .visitDate(encounter.getVisitDate() != null ? encounter.getVisitDate().toString() : null)
+                .checkinTime(encounter.getCheckinTime() != null ? encounter.getCheckinTime().toString() : null)
                 .encounterNotes(encounter.getNotes())
                 .roomNumber(encounter.getRoomNumber())
                 .patientId(encounter.getPatientId())
-                .doctorId(encounter.getDoctorId());
+                .doctorId(encounter.getDoctorId())
+                .build();
     }
 
     // 🔹 Add Patient Details
-    public void mapPatientDetails(PatientCaseTimeline.PatientCaseTimelineBuilder builder, Patient patient) {
+    public void mapPatientDetails(PatientCaseTimeline builder, Patient patient) {
         if (patient == null) return;
 
-        builder.patientName(patient.getFirstName() + " " + patient.getLastName());
-        builder.patientUhid(patient.getUhid());
-        builder.gender(patient.getGender());
-        builder.dob(patient.getDob() != null ? patient.getDob().toString() : null);
-        builder.phone(patient.getPhone());
-        builder.bloodGroup(patient.getBloodGroup());
-
+        builder.setPatientName(patient.getFirstName() + " " + patient.getLastName());
+        builder.setPatientUhid(patient.getUhid());
+        builder.setGender(patient.getGender());
+        builder.setDob(patient.getDob() != null ? patient.getDob().toString() : null);
+        builder.setPhone(patient.getPhone());
+        builder.setBloodGroup(patient.getBloodGroup());
     }
 
     // 🔹 Add Doctor Details
-    public void mapDoctorDetails(PatientCaseTimeline.PatientCaseTimelineBuilder builder, User doctor) {
+    public void mapDoctorDetails(PatientCaseTimeline builder, User doctor) {
         if (doctor != null) {
-            builder.doctorName(doctor.getUsername());
+            builder.setDoctorName(doctor.getUsername());
         }
     }
 
     // 🔹 Add Consultation Details
-    public void mapConsultationDetails(PatientCaseTimeline.PatientCaseTimelineBuilder builder,
+    public void mapConsultationDetails(PatientCaseTimeline builder,
                                        Consultation consultation) {
         if (consultation == null) return;
 
-        builder.consultationId(consultation.getId());
-        builder.symptoms(consultation.getSymptoms());
-        builder.diagnosis(consultation.getDiagnosis());
-        builder.prescription(consultation.getPrescription());
-        builder.doctorNotes(consultation.getDoctorNotes());
-        builder.followupDate(consultation.getFollowupDate());
-        builder.testsRequested(consultation.getTestsRequested());
-        builder.consultationCreatedAt(consultation.getCreatedAt());
+        builder.setConsultationId(consultation.getId());
+        builder.setSymptoms(consultation.getSymptoms());
+        builder.setDiagnosis(consultation.getDiagnosis());
+        builder.setPrescription(consultation.getPrescription());
+        builder.setDoctorNotes(consultation.getDoctorNotes());
+        builder.setFollowupDate(consultation.getFollowupDate() != null ? consultation.getFollowupDate().toString() : null);
+        builder.setTestsRequested(consultation.getTestsRequested());
+        builder.setConsultationCreatedAt(consultation.getCreatedAt() != null ? consultation.getCreatedAt().toString() : null);
     }
 
     // 🔹 Dashboard Stats Mapping

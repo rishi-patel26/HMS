@@ -25,5 +25,6 @@ public class BillResponse {
     private PaymentStatus paymentStatus;
     private String paymentMethod;
     private List<BillItemResponse> items;
+    private List<PaymentResponse> payments;
     private LocalDateTime createdAt;
 }

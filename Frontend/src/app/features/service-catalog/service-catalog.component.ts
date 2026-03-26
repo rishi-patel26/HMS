@@ -16,6 +16,7 @@ import { ToastModule } from 'primeng/toast';
 })
 export class ServiceCatalogComponent implements OnInit {
   services: ServiceCatalogItem[] = [];
+  allServices: ServiceCatalogItem[] = [];
   serviceForm: FormGroup;
   showForm = false;
   editingId: number | null = null;
@@ -23,6 +24,7 @@ export class ServiceCatalogComponent implements OnInit {
   loading = true;
   filterCategory = '';
   filterStatus = '';
+  searchQuery = '';
 
   constructor(
     private fb: FormBuilder,
@@ -56,18 +58,14 @@ export class ServiceCatalogComponent implements OnInit {
   }
 
   get filteredServices(): ServiceCatalogItem[] {
-    return this.services.filter(s => {
-      if (this.filterCategory && s.category !== this.filterCategory) return false;
-      if (this.filterStatus === 'active' && !s.active) return false;
-      if (this.filterStatus === 'inactive' && s.active) return false;
-      return true;
-    });
+    return this.services;
   }
 
   loadServices(): void {
     this.loading = true;
     this.serviceCatalogService.getAllServices().subscribe({
       next: (services) => {
+        this.allServices = services;
         this.services = services;
         this.loading = false;
         this.cdr.detectChanges();
@@ -82,6 +80,49 @@ export class ServiceCatalogComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  searchServices(): void {
+    if (!this.searchQuery.trim()) {
+      this.services = this.allServices;
+      this.applyLocalFilters();
+      return;
+    }
+
+    this.loading = true;
+    this.serviceCatalogService.searchServices(this.searchQuery).subscribe({
+      next: (services) => {
+        this.services = services;
+        this.allServices = services;
+        this.applyLocalFilters();
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading = false;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to search services'
+        });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  onSearchInput(): void {
+    this.searchServices();
+  }
+
+  applyLocalFilters(): void {
+    // Apply category and status filters on top of search results
+    this.services = this.allServices.filter(s => {
+      if (this.filterCategory && s.category !== this.filterCategory) return false;
+      if (this.filterStatus === 'active' && !s.active) return false;
+      if (this.filterStatus === 'inactive' && s.active) return false;
+      return true;
+    });
+    this.cdr.detectChanges();
   }
 
   toggleForm(): void {

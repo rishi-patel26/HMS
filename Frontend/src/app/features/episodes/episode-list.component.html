@@ -217,6 +217,9 @@
             </div>
           </div>
           <div class="ep-card-footer">
+            <button class="btn-sm btn-view-encounters" (click)="viewEpisodeEncounters(ep)" title="View Encounters">
+              <i class="pi pi-list"></i> View Encounters
+            </button>
             @if (userRole === 'DOCTOR' || userRole === 'ADMIN') {
               <button class="btn-sm btn-edit" (click)="openEditForm(ep)" title="Edit">
                 <i class="pi pi-pencil"></i> Edit
@@ -260,5 +263,113 @@
     </div>
   }
 </div>
+
+<!-- Episode Encounters Modal -->
+@if (selectedEpisode) {
+  <div class="modal-overlay" (click)="closeEncountersView()">
+    <div class="modal-content encounters-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-section">
+          <i class="pi pi-list"></i>
+          <div>
+            <h2>Encounters for Episode</h2>
+            <p class="episode-desc">{{ selectedEpisode.description }}</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" (click)="closeEncountersView()" title="Close">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (loadingEncounters) {
+          <div class="loading-state-sm">
+            <i class="pi pi-spin pi-spinner"></i>
+            <p>Loading encounters...</p>
+          </div>
+        }
+
+        @if (!loadingEncounters && episodeEncounters.length > 0) {
+          <div class="encounters-count">
+            <span>{{ episodeEncounters.length }} encounter{{ episodeEncounters.length > 1 ? 's' : '' }} found</span>
+          </div>
+          <div class="encounters-list">
+            @for (enc of episodeEncounters; track enc.id) {
+              <div class="encounter-card">
+                <div class="enc-header">
+                  <div class="enc-number">
+                    <i class="pi pi-hashtag"></i>
+                    <strong>{{ enc.encounterNumber }}</strong>
+                  </div>
+                  <span class="enc-status-badge" [attr.data-status]="enc.status">{{ enc.status }}</span>
+                </div>
+                <div class="enc-body">
+                  <div class="enc-info-row">
+                    <div class="enc-info-item">
+                      <i class="pi pi-user"></i>
+                      <span><strong>Patient:</strong> {{ enc.patientName }}</span>
+                    </div>
+                    <div class="enc-info-item">
+                      <i class="pi pi-id-card"></i>
+                      <span><strong>UHID:</strong> {{ enc.patientUhid }}</span>
+                    </div>
+                  </div>
+                  <div class="enc-info-row">
+                    <div class="enc-info-item">
+                      <i class="pi pi-user-edit"></i>
+                      <span><strong>Doctor:</strong> {{ enc.doctorName }}</span>
+                    </div>
+                    <div class="enc-info-item">
+                      <i class="pi pi-building"></i>
+                      <span><strong>Visit Type:</strong> {{ enc.visitType }}</span>
+                    </div>
+                  </div>
+                  <div class="enc-info-row">
+                    <div class="enc-info-item">
+                      <i class="pi pi-calendar"></i>
+                      <span><strong>Visit Date:</strong> {{ formatDate(enc.visitDate) }}</span>
+                    </div>
+                    <div class="enc-info-item">
+                      <i class="pi pi-clock"></i>
+                      <span><strong>Check-in:</strong> {{ formatDateTime(enc.checkinTime) }}</span>
+                    </div>
+                  </div>
+                  @if (enc.priority) {
+                    <div class="enc-info-row">
+                      <div class="enc-info-item">
+                        <i class="pi pi-flag"></i>
+                        <span><strong>Priority:</strong> <span class="priority-badge" [attr.data-priority]="enc.priority">{{ enc.priority }}</span></span>
+                      </div>
+                      @if (enc.roomNumber) {
+                        <div class="enc-info-item">
+                          <i class="pi pi-home"></i>
+                          <span><strong>Room:</strong> {{ enc.roomNumber }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                  @if (enc.notes) {
+                    <div class="enc-notes">
+                      <i class="pi pi-file-edit"></i>
+                      <span><strong>Notes:</strong> {{ enc.notes }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (!loadingEncounters && episodeEncounters.length === 0) {
+          <div class="empty-state-sm">
+            <div class="empty-icon-sm"><i class="pi pi-inbox"></i></div>
+            <h4>No Encounters Found</h4>
+            <p>This episode doesn't have any encounters yet.</p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
 
 <p-toast></p-toast>

@@ -1,6 +1,8 @@
 package com.example.HMS_backend.servicecatalog.service;
 
 import com.example.HMS_backend.exception.ResourceNotFoundException;
+import com.example.HMS_backend.search.SearchResult;
+import com.example.HMS_backend.search.SmartSearchService;
 import com.example.HMS_backend.servicecatalog.dto.ServiceRequest;
 import com.example.HMS_backend.servicecatalog.dto.ServiceResponse;
 import com.example.HMS_backend.servicecatalog.entity.ServiceCatalog;
@@ -10,7 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +21,7 @@ public class ServiceCatalogService {
 
     private final ServiceCatalogRepository serviceCatalogRepository;
     private final ServiceMapper serviceMapper;
+    private final SmartSearchService smartSearchService;
 
     @Transactional
     public ServiceResponse createService(ServiceRequest request) {
@@ -50,5 +54,29 @@ public class ServiceCatalogService {
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found with id: " + id));
         entity.setActive(false);
         serviceCatalogRepository.save(entity);
+    }
+
+    public List<ServiceResponse> searchServices(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return getAllServices();
+        }
+
+        List<ServiceCatalog> allServices = serviceCatalogRepository.findByActiveTrue();
+
+        Map<String, Function<ServiceCatalog, String>> fieldExtractors = new LinkedHashMap<>();
+        fieldExtractors.put("name", ServiceCatalog::getName);
+        fieldExtractors.put("description", service -> service.getDescription() != null ? service.getDescription() : "");
+        fieldExtractors.put("category", service -> service.getCategory() != null ? service.getCategory() : "");
+
+        List<SearchResult<ServiceCatalog>> results = smartSearchService.multiFieldSearch(
+                query,
+                allServices,
+                fieldExtractors
+        );
+
+        return results.stream()
+                .map(SearchResult::getData)
+                .map(serviceMapper::toResponse)
+                .toList();
     }
 }

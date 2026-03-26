@@ -158,6 +158,13 @@
                       No Show
                     </button>
                   }
+                  @if (userRole === 'ADMIN' || userRole === 'FRONTDESK') {
+                    @if (apt.status === 'SCHEDULED') {
+                      <button class="btn-sm btn-edit" (click)="editAppointment(apt.id)" title="Edit">
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                    }
+                  }
                   @if (userRole === 'ADMIN') {
                     <button class="btn-sm btn-delete" (click)="deleteAppointment(apt)" title="Delete">
                       <i class="pi pi-trash"></i>

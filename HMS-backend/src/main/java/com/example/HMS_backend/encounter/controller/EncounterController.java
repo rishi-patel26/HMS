@@ -76,4 +76,9 @@ public class EncounterController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(encounterService.getDoctorEncountersByDate(authentication.getName(), date));
     }
+
+    @GetMapping("/episode/{episodeId}")
+    public ResponseEntity<List<EncounterResponse>> getEncountersByEpisode(@PathVariable Long episodeId) {
+        return ResponseEntity.ok(encounterService.getEncountersByEpisode(episodeId));
+    }
 }

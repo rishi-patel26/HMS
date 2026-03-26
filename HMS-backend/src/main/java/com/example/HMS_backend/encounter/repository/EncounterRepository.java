@@ -21,6 +21,8 @@ public interface EncounterRepository extends JpaRepository<Encounter, Long> {
 
     List<Encounter> findByDoctorIdOrderByCreatedAtDesc(Long doctorId);
     
+    List<Encounter> findByEpisodeIdOrderByCreatedAtDesc(Long episodeId);
+    
     @Query("SELECT e.status, COUNT(e) FROM Encounter e GROUP BY e.status")
     List<Object[]> countByStatus();
 }

@@ -11,14 +11,16 @@ import com.example.HMS_backend.encounter.repository.EncounterRepository;
 import com.example.HMS_backend.exception.ResourceNotFoundException;
 import com.example.HMS_backend.patient.entity.Patient;
 import com.example.HMS_backend.patient.repository.PatientRepository;
+import com.example.HMS_backend.search.SearchResult;
+import com.example.HMS_backend.search.SmartSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class ConsultationService {
     private final ConsultationMapper consultationMapper;
     private final EncounterRepository encounterRepository;
     private final PatientRepository patientRepository;
+    private final SmartSearchService smartSearchService;
 
     @Transactional
     public ConsultationResponse createConsultation(ConsultationRequest request) {
@@ -107,28 +110,53 @@ public class ConsultationService {
     public List<ConsultationResponse> searchConsultations(String patientName, Long patientId) {
         List<Consultation> all = consultationRepository.findAll();
 
-        return all.stream()
+        // Filter by patientId if provided
+        List<Consultation> filtered = all.stream()
                 .filter(c -> {
                     if (patientId != null) {
                         return encounterRepository.findById(c.getEncounterId())
                                 .map(e -> e.getPatientId().equals(patientId))
                                 .orElse(false);
                     }
-                    if (patientName != null && !patientName.isBlank()) {
-                        String query = patientName.toLowerCase();
-                        return encounterRepository.findById(c.getEncounterId())
-                                .flatMap(e -> patientRepository.findById(e.getPatientId()))
-                                .map(p -> (p.getFirstName() + " " + p.getLastName()).toLowerCase().contains(query)
-                                        || (p.getUhid() != null && p.getUhid().toLowerCase().contains(query)))
-                                .orElse(false);
-                    }
                     return true;
                 })
-                .sorted((a, b) -> {
-                    if (b.getCreatedAt() == null) return -1;
-                    if (a.getCreatedAt() == null) return 1;
-                    return b.getCreatedAt().compareTo(a.getCreatedAt());
-                })
+                .toList();
+
+        // If no patient name query, return filtered consultations
+        if (patientName == null || patientName.isBlank()) {
+            return filtered.stream()
+                    .sorted((a, b) -> {
+                        if (b.getCreatedAt() == null) return -1;
+                        if (a.getCreatedAt() == null) return 1;
+                        return b.getCreatedAt().compareTo(a.getCreatedAt());
+                    })
+                    .map(consultationMapper::toResponse)
+                    .toList();
+        }
+
+        // Apply smart search on patient name and UHID
+        Map<String, Function<Consultation, String>> fieldExtractors = new LinkedHashMap<>();
+        fieldExtractors.put("patientName", consultation -> {
+            ConsultationResponse response = consultationMapper.toResponse(consultation);
+            return response.getPatientName() != null ? response.getPatientName() : "";
+        });
+        fieldExtractors.put("patientUhid", consultation -> {
+            ConsultationResponse response = consultationMapper.toResponse(consultation);
+            return response.getPatientUhid() != null ? response.getPatientUhid() : "";
+        });
+        fieldExtractors.put("doctorName", consultation -> {
+            ConsultationResponse response = consultationMapper.toResponse(consultation);
+            return response.getDoctorName() != null ? response.getDoctorName() : "";
+        });
+
+        List<SearchResult<Consultation>> results = smartSearchService.multiFieldSearch(
+                patientName,
+                filtered,
+                fieldExtractors
+        );
+
+        return results.stream()
+                .map(SearchResult::getData)
                 .map(consultationMapper::toResponse)
                 .toList();
     }

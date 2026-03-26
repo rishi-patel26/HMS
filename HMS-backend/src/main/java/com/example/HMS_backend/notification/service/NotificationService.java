@@ -5,22 +5,30 @@ import com.example.HMS_backend.notification.entity.Notification;
 import com.example.HMS_backend.notification.enums.NotificationType;
 import com.example.HMS_backend.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Service
+
 @RequiredArgsConstructor
+@Slf4j
+@Service
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    /** Store a notification targeted at a specific user (by username). */
+    /** 
+     * Store a notification targeted at a specific user (by username).
+     * Sends notification to user's dedicated channel: /user/{username}/queue/notifications
+     */
     @Transactional
     public void notifyUser(String message, NotificationType type, String username) {
+        log.info("Creating notification for user '{}': {}", username, message);
+        
         Notification notification = Notification.builder()
                 .message(message)
                 .type(type)
@@ -28,14 +36,22 @@ public class NotificationService {
                 .build();
         Notification saved = notificationRepository.save(notification);
         
-        // Send real-time notification via WebSocket
+        // Send real-time notification via WebSocket to user's dedicated channel
         NotificationResponse response = toResponse(saved);
-        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", response);
+        String destination = "/queue/notifications";
+        messagingTemplate.convertAndSendToUser(username, destination, response);
+        
+        log.debug("Notification sent to user '{}' on channel '/user/{}/queue/notifications'", username, username);
     }
 
-    /** Store a notification targeted at all users with a specific role (e.g. "FRONTDESK"). */
+    /** 
+     * Store a notification targeted at all users with a specific role (e.g. "FRONTDESK").
+     * Sends notification to role-based channel: /topic/notifications/{role}
+     */
     @Transactional
     public void notifyRole(String message, NotificationType type, String role) {
+        log.info("Creating notification for role '{}': {}", role, message);
+        
         Notification notification = Notification.builder()
                 .message(message)
                 .type(type)
@@ -45,7 +61,10 @@ public class NotificationService {
         
         // Send real-time notification via WebSocket to all users with this role
         NotificationResponse response = toResponse(saved);
-        messagingTemplate.convertAndSend("/topic/notifications/" + role, response);
+        String destination = "/topic/notifications/" + role;
+        messagingTemplate.convertAndSend(destination, response);
+        
+        log.debug("Notification sent to role '{}' on channel '{}'", role, destination);
     }
 
     /** Fetch all notifications for a user (user-specific + role-based). */

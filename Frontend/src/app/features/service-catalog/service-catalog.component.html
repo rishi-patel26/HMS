@@ -116,12 +116,28 @@
   <!-- Filter Bar -->
   @if (services.length > 0 && !loading) {
     <div class="filter-bar">
+      <!-- Search Box -->
+      <div class="search-box">
+        <i class="pi pi-search search-icon"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (input)="onSearchInput()"
+          placeholder="Search services by name, description, or category..."
+          class="search-input" />
+        @if (searchQuery) {
+          <button type="button" class="clear-btn" (click)="searchQuery = ''; onSearchInput()">
+            <i class="pi pi-times"></i>
+          </button>
+        }
+      </div>
+
       <div class="filter-group">
         <span class="filter-label">Category</span>
         <div class="filter-chips">
-          <button class="chip" [class.active]="filterCategory === ''" (click)="filterCategory = ''">All</button>
+          <button class="chip" [class.active]="filterCategory === ''" (click)="filterCategory = ''; applyLocalFilters()">All</button>
           @for (cat of categories; track cat) {
-            <button class="chip" [class.active]="filterCategory === cat" (click)="filterCategory = cat">
+            <button class="chip" [class.active]="filterCategory === cat" (click)="filterCategory = cat; applyLocalFilters()">
               {{ formatCategory(cat) }}
             </button>
           }
@@ -130,9 +146,9 @@
       <div class="filter-group">
         <span class="filter-label">Status</span>
         <div class="filter-chips">
-          <button class="chip" [class.active]="filterStatus === ''" (click)="filterStatus = ''">All</button>
-          <button class="chip" [class.active]="filterStatus === 'active'" (click)="filterStatus = 'active'">Active</button>
-          <button class="chip" [class.active]="filterStatus === 'inactive'" (click)="filterStatus = 'inactive'">Inactive</button>
+          <button class="chip" [class.active]="filterStatus === ''" (click)="filterStatus = ''; applyLocalFilters()">All</button>
+          <button class="chip" [class.active]="filterStatus === 'active'" (click)="filterStatus = 'active'; applyLocalFilters()">Active</button>
+          <button class="chip" [class.active]="filterStatus === 'inactive'" (click)="filterStatus = 'inactive'; applyLocalFilters()">Inactive</button>
         </div>
       </div>
     </div>

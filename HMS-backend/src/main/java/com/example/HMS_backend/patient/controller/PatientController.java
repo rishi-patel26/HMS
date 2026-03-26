@@ -39,6 +39,7 @@ public class PatientController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'FRONTDESK')")
     public ResponseEntity<PatientResponse> updatePatient(@PathVariable Long id,
                                                           @Valid @RequestBody PatientRequest request) {
         return ResponseEntity.ok(patientService.updatePatient(id, request));

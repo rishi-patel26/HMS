@@ -243,6 +243,75 @@
     .payment-method-value { color: #1e293b; }
   }
 
+  .payment-details-section {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #4f46e5;
+      margin: 0 0 0.75rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      &::before {
+        content: '';
+        width: 4px;
+        height: 18px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        border-radius: 2px;
+      }
+    }
+
+    .payment-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0.5rem;
+
+      thead tr {
+        background: #f8f9ff;
+        border-bottom: 2px solid #e8e5f8;
+        th {
+          padding: 0.65rem 1rem;
+          text-align: left;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #4f46e5;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+      }
+
+      tbody tr {
+        border-bottom: 1px solid #f1f0fb;
+        td {
+          padding: 0.65rem 1rem;
+          font-size: 0.88rem;
+          color: #334155;
+        }
+      }
+
+      tfoot {
+        .total-payment-row {
+          background: #f0f0ff;
+          border-top: 2px solid #4f46e5;
+          td {
+            padding: 0.7rem 1rem;
+            font-size: 0.95rem;
+            color: #4f46e5;
+          }
+        }
+        .total-label { text-align: right; }
+      }
+
+      .col-no { width: 8%; text-align: center; }
+      .col-date { width: 25%; }
+      .col-method { width: 37%; }
+      .col-amount { width: 30%; text-align: right; }
+    }
+  }
+
   .invoice-footer {
     margin-top: 2rem;
     text-align: center;

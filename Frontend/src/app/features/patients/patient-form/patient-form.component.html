@@ -4,10 +4,17 @@
       <i class="pi pi-arrow-left"></i>
     </button>
     <div class="header-content">
-      <h1>Register New Patient</h1>
-      <p class="header-subtitle">Fill in the patient details to create a new record</p>
+      <h1>{{ isEditMode ? 'Edit Patient' : 'Register New Patient' }}</h1>
+      <p class="header-subtitle">{{ isEditMode ? 'Update patient details' : 'Fill in the patient details to create a new record' }}</p>
     </div>
   </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading patient details...</p>
+    </div>
+  }
 
   @if (errorMessage) {
     <div class="error-banner">
@@ -16,6 +23,7 @@
     </div>
   }
 
+  @if (!loading) {
   <div class="form-card">
     <form [formGroup]="patientForm" (ngSubmit)="onSubmit()">
 
@@ -170,12 +178,13 @@
         </button>
         <button type="submit" class="btn-primary" [disabled]="submitting">
           @if (submitting) {
-            <i class="pi pi-spin pi-spinner"></i> Registering...
+            <i class="pi pi-spin pi-spinner"></i> {{ isEditMode ? 'Updating...' : 'Registering...' }}
           } @else {
-            <i class="pi pi-check"></i> Register Patient
+            <i class="pi pi-check"></i> {{ isEditMode ? 'Update Patient' : 'Register Patient' }}
           }
         </button>
       </div>
     </form>
   </div>
+  }
 </div>

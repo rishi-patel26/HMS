@@ -183,11 +183,6 @@
             <span>{{ encounter.createdBy }}</span>
           </div>
         </div>
-        <div class="detail-actions">
-          <!-- <button class="btn-primary" (click)="createBill()">
-            <i class="pi pi-money-bill"></i> Create Bill
-          </button> -->
-        </div>
       </div>
 
       <!-- Appointment Information -->
@@ -222,8 +217,59 @@
         </div>
       }
 
-      <!-- Episode Status -->
-      @if (encounter!.episodeId) {
+      <!-- Episode Information -->
+      @if (episodeDetails) {
+        <div class="detail-card" style="margin-top: 1rem;">
+          <div class="detail-header">
+            <span class="enc-number">Episode Information</span>
+            <span class="status-badge" [attr.data-status]="episodeDetails.status">{{ episodeDetails.status }}</span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Episode Type</label>
+              <span class="episode-type-badge" [attr.data-type]="episodeDetails.episodeType">{{ episodeDetails.episodeType }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Description</label>
+              <span>{{ episodeDetails.description }}</span>
+            </div>
+            @if (episodeDetails.severity) {
+              <div class="detail-item">
+                <label>Severity</label>
+                <span class="severity-badge" [attr.data-severity]="episodeDetails.severity">{{ episodeDetails.severity }}</span>
+              </div>
+            }
+            <div class="detail-item">
+              <label>Start Date</label>
+              <span>{{ episodeDetails.startDate | date:'mediumDate' }}</span>
+            </div>
+            @if (episodeDetails.endDate) {
+              <div class="detail-item">
+                <label>End Date</label>
+                <span>{{ episodeDetails.endDate | date:'mediumDate' }}</span>
+              </div>
+            }
+            @if (episodeDetails.startTime) {
+              <div class="detail-item">
+                <label>Start Time</label>
+                <span>{{ episodeDetails.startTime }}</span>
+              </div>
+            }
+            @if (episodeDetails.diagnosisSummary) {
+              <div class="detail-item full-width">
+                <label>Diagnosis Summary</label>
+                <span>{{ episodeDetails.diagnosisSummary }}</span>
+              </div>
+            }
+            @if (episodeDetails.notes) {
+              <div class="detail-item full-width">
+                <label>Notes</label>
+                <span>{{ episodeDetails.notes }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      } @else if (encounter!.episodeId) {
         <div class="detail-card" style="margin-top: 1rem;">
           <div class="detail-header">
             <span class="enc-number">Episode</span>

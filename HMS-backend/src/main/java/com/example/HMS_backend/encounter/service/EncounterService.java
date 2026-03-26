@@ -175,4 +175,10 @@ public class EncounterService {
                 .map(encounterMapper::toResponse)
                 .toList();
     }
+
+    public List<EncounterResponse> getEncountersByEpisode(Long episodeId) {
+        return encounterRepository.findByEpisodeIdOrderByCreatedAtDesc(episodeId).stream()
+                .map(encounterMapper::toResponse)
+                .toList();
+    }
 }

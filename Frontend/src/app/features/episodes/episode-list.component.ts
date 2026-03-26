@@ -6,10 +6,11 @@ import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap, o
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { EpisodeService } from '../../core/services/episode.service';
+import { EncounterService } from '../../core/services/encounter.service';
 import { PatientService } from '../../core/services/patient.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DataRefreshService } from '../../core/services/data-refresh.service';
-import { Episode, Patient, EpisodeRequest } from '../../core/models/hms.model';
+import { Episode, Patient, EpisodeRequest, Encounter } from '../../core/models/hms.model';
 import { Role } from '../../core/enums/role.enum';
 
 @Component({
@@ -37,12 +38,17 @@ export class EpisodeListComponent implements OnInit, OnDestroy {
   submitting = false;
   errorMessage = '';
 
+  selectedEpisode: Episode | null = null;
+  episodeEncounters: Encounter[] = [];
+  loadingEncounters = false;
+
   private searchSubject = new Subject<string>();
   private searchSub!: Subscription;
   private refreshSub!: Subscription;
 
   constructor(
     private episodeService: EpisodeService,
+    private encounterService: EncounterService,
     private patientService: PatientService,
     private authService: AuthService,
     private dataRefresh: DataRefreshService,
@@ -276,5 +282,47 @@ export class EpisodeListComponent implements OnInit, OnDestroy {
   isInvalid(field: string): boolean {
     const control = this.episodeForm.get(field);
     return !!control && control.invalid && control.touched;
+  }
+
+  viewEpisodeEncounters(episode: Episode): void {
+    this.selectedEpisode = episode;
+    this.loadingEncounters = true;
+    this.encounterService.getEncountersByEpisode(episode.id).subscribe({
+      next: (encounters: Encounter[]) => {
+        this.episodeEncounters = encounters;
+        this.loadingEncounters = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingEncounters = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load encounters' });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeEncountersView(): void {
+    this.selectedEpisode = null;
+    this.episodeEncounters = [];
+  }
+
+  formatDateTime(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 }

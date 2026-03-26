@@ -107,6 +107,7 @@ export interface Bill {
   paymentStatus: PaymentStatus;
   paymentMethod: string;
   items: BillItem[];
+  payments: Payment[];
   createdAt: string;
 }
 
@@ -123,6 +124,14 @@ export interface BillItem {
 export interface BillItemRequest {
   serviceId: number;
   quantity: number;
+}
+
+export interface Payment {
+  id: number;
+  amount: number;
+  paymentMethod: string;
+  transactionReference: string | null;
+  createdAt: string;
 }
 
 export interface PaymentRequest {
